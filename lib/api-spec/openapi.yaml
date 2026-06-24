@@ -851,13 +851,15 @@ components:
 
     ChoreInput:
       type: object
-      required: [name, valueCents]
+      required: [name]
       properties:
         name:
           type: string
           minLength: 1
         valueCents:
           type: integer
+          description: Reward per completion in cents. Omit or 0 for a checklist chore tied to the base allowance.
+          default: 0
         kidIds:
           type: array
           items:

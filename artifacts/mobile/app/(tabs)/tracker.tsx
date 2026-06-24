@@ -106,6 +106,8 @@ export default function TrackerScreen() {
   const kidChores = chores.filter(
     c => c.active && (!c.kidIds.length || c.kidIds.includes(kidId ?? 0))
   );
+  const checklistChores = kidChores.filter(c => c.valueCents === 0);
+  const paidChores = kidChores.filter(c => c.valueCents > 0);
 
   const choreState = (chore: Chore): ChoreState => {
     const match = todayEntries.find(e => e.label === chore.name);
@@ -208,14 +210,41 @@ export default function TrackerScreen() {
           </View>
         )}
 
-        {/* Chores */}
-        {isOpen && (
+        {/* Checklist chores (tied to base allowance, no $ value) */}
+        {isOpen && checklistChores.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>REGULAR CHORES</Text>
-            {kidChores.length === 0 && (
-              <Text style={styles.emptyBody}>No chores assigned — add them in More → Chores.</Text>
-            )}
-            {kidChores.map(chore => {
+            <Text style={styles.sectionTitle}>CHECKLIST</Text>
+            {checklistChores.map(chore => {
+              const done = choreState(chore) === "done";
+              return (
+                <TouchableOpacity
+                  key={chore.id}
+                  style={styles.choreRow}
+                  activeOpacity={0.7}
+                  onPress={() => handleChore(chore, "chore_done")}
+                >
+                  <View style={[styles.checkBox, done && styles.checkBoxDone]}>
+                    <Text style={[styles.checkIcon, done && { color: C.primaryForeground }]}>
+                      {done ? "✓" : ""}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={[styles.choreName, done && { color: C.mutedForeground, textDecorationLine: "line-through" }]}>
+                      {chore.name}
+                    </Text>
+                    <Text style={styles.checklistTag}>Part of base allowance</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </>
+        )}
+
+        {/* Paid chores (reward / penalty per completion) */}
+        {isOpen && paidChores.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, checklistChores.length > 0 && { marginTop: 20 }]}>PAID CHORES</Text>
+            {paidChores.map(chore => {
               const state = choreState(chore);
               return (
                 <View key={chore.id} style={styles.choreRow}>
@@ -264,6 +293,13 @@ export default function TrackerScreen() {
                 </View>
               );
             })}
+          </>
+        )}
+
+        {isOpen && kidChores.length === 0 && (
+          <>
+            <Text style={styles.sectionTitle}>CHORES</Text>
+            <Text style={styles.emptyBody}>No chores assigned — add them in More → Chores.</Text>
           </>
         )}
 
@@ -404,6 +440,10 @@ const styles = StyleSheet.create({
   stateIcon: { fontFamily: "Inter_700Bold", fontSize: 14, color: C.mutedForeground },
   choreName: { fontFamily: "Inter_500Medium", fontSize: 15, color: C.foreground },
   choreAmt: { fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 },
+  checkBox: { width: 28, height: 28, borderRadius: 8, borderWidth: 1.5, borderColor: C.border, justifyContent: "center", alignItems: "center" },
+  checkBoxDone: { backgroundColor: C.primary, borderColor: C.primary },
+  checkIcon: { fontFamily: "Inter_700Bold", fontSize: 15, color: "transparent" },
+  checklistTag: { fontFamily: "Inter_400Regular", fontSize: 11, color: C.mutedForeground, marginTop: 2 },
   choreButtons: { flexDirection: "row", gap: 6 },
   doneBtn: { backgroundColor: C.positive + "20", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
   doneBtnTxt: { fontFamily: "Inter_600SemiBold", color: C.positive, fontSize: 13 },

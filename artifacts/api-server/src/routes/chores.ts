@@ -24,9 +24,9 @@ router.get("/chores", requireAuth, requireHousehold, async (req: Request, res: R
 });
 
 router.post("/chores", requireAuth, requireHousehold, async (req: Request, res: Response): Promise<void> => {
-  const { name, valueCents, kidIds = [] } = req.body;
-  if (!name || valueCents === undefined) {
-    res.status(400).json({ error: "name and valueCents are required" });
+  const { name, valueCents = 0, kidIds = [] } = req.body;
+  if (!name) {
+    res.status(400).json({ error: "name is required" });
     return;
   }
 

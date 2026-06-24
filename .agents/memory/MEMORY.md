@@ -1,3 +1,1 @@
-- [Clerk Expo v3 signals API](clerk-expo-v3.md) — useSignIn/useSignUp return signals, not classic hook objects; must use signIn.password(), signIn.finalize() pattern
-- [Orval params collision fix](orval-params-collision.md) — endpoints with path+query params both generate same-named Params type; remove query param or rename operationId to fix TS2308
-- [Week engine money rules](week-engine.md) — all cents integers; debt rolls negative into next week's opening balance; payout_plans.mode_name is 0/1/2 integer
+- [Chore types (checklist vs paid)](chore-types.md) — valueCents===0 means a checklist chore tied to base allowance, no money impact; entry↔chore matching is by label not id (fragile).

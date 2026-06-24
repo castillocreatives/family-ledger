@@ -118,7 +118,8 @@ export interface Chore {
 export interface ChoreInput {
   /** @minLength 1 */
   name: string;
-  valueCents: number;
+  /** Reward per completion in cents. Omit or 0 for a checklist chore tied to the base allowance. */
+  valueCents?: number;
   kidIds?: number[];
 }
 

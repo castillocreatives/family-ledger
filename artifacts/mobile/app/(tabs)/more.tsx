@@ -96,8 +96,9 @@ export default function MoreScreen() {
 
   const handleSaveChore = () => {
     if (!choreName.trim()) { Alert.alert("Name is required"); return; }
-    const cents = Math.round(parseFloat(choreValue) * 100);
-    if (!cents || isNaN(cents)) { Alert.alert("Enter a valid value"); return; }
+    const trimmed = choreValue.trim();
+    const cents = trimmed === "" ? 0 : Math.round(parseFloat(trimmed) * 100);
+    if (isNaN(cents) || cents < 0) { Alert.alert("Enter a valid value, or leave blank for a checklist chore"); return; }
     createChore.mutate({ name: choreName.trim(), valueCents: cents });
     setChoreName(""); setChoreValue("");
     setChoreModal({ visible: false });
@@ -130,7 +131,7 @@ export default function MoreScreen() {
             <View key={c.id} style={styles.row}>
               <Text style={[styles.rowLabel, !c.active && { color: C.mutedForeground }]}>{c.name}</Text>
               <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-                <Text style={styles.rowValue}>{centsToDisplay(c.valueCents)}</Text>
+                <Text style={styles.rowValue}>{c.valueCents > 0 ? centsToDisplay(c.valueCents) : "Checklist"}</Text>
                 <TouchableOpacity onPress={() => toggleChore.mutate({ id: c.id, active: !c.active })}>
                   <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: c.active ? C.positive : C.mutedForeground }}>
                     {c.active ? "Active" : "Off"}
@@ -200,7 +201,8 @@ export default function MoreScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Add a chore</Text>
             <TextInput style={styles.input} placeholder="Chore name" placeholderTextColor={C.mutedForeground} value={choreName} onChangeText={setChoreName} />
-            <TextInput style={styles.input} placeholder="Value per completion (e.g. 0.50)" placeholderTextColor={C.mutedForeground} value={choreValue} onChangeText={setChoreValue} keyboardType="decimal-pad" />
+            <TextInput style={styles.input} placeholder="Reward per completion (e.g. 0.50)" placeholderTextColor={C.mutedForeground} value={choreValue} onChangeText={setChoreValue} keyboardType="decimal-pad" />
+            <Text style={styles.modalHint}>Leave the reward blank for a checklist chore — it's expected as part of the base allowance and doesn't pay extra.</Text>
             <View style={styles.modalBtns}>
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setChoreModal({ visible: false })}>
                 <Text style={styles.cancelTxt}>Cancel</Text>
@@ -230,6 +232,7 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" },
   modalCard: { backgroundColor: C.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40 },
   modalTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: C.foreground, marginBottom: 16 },
+  modalHint: { fontFamily: "Inter_400Regular", fontSize: 12, color: C.mutedForeground, lineHeight: 17, marginTop: -4, marginBottom: 14 },
   input: { backgroundColor: C.background, color: C.foreground, fontFamily: "Inter_400Regular", borderWidth: 1, borderColor: C.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, marginBottom: 12 },
   colorRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
   colorDot: { width: 34, height: 34, borderRadius: 17 },

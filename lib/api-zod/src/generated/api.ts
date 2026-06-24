@@ -259,11 +259,11 @@ export const ListChoresResponse = zod.array(ListChoresResponseItem)
  * @summary Create a chore template
  */
 
-
+export const createChoreBodyValueCentsDefault = 0;
 
 export const CreateChoreBody = zod.object({
   "name": zod.string().min(1),
-  "valueCents": zod.number(),
+  "valueCents": zod.number().default(createChoreBodyValueCentsDefault).describe('Reward per completion in cents. Omit or 0 for a checklist chore tied to the base allowance.'),
   "kidIds": zod.array(zod.number()).optional()
 })
 
