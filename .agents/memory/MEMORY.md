@@ -1,1 +1,2 @@
 - [Chore types (checklist vs paid)](chore-types.md) — valueCents===0 means a checklist chore tied to base allowance, no money impact; entry↔chore matching is by label not id (fragile).
+- [Expo web Share quirk](expo-web-share.md) — RN Share.share()/native APIs fail silently in the web preview; branch on Platform.OS, fall back to clipboard, always show visible feedback.

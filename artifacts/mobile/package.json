@@ -59,6 +59,7 @@
     "@clerk/expo": "^3.5.3",
     "@expo-google-fonts/space-grotesk": "^0.4.1",
     "expo-auth-session": "~7.0.11",
+    "expo-clipboard": "~8.0.8",
     "expo-crypto": "~15.0.9",
     "expo-secure-store": "~15.0.8"
   }

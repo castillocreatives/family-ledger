@@ -3,8 +3,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, Modal, TextInput, ActivityIndicator, Share,
+  Alert, Modal, TextInput, ActivityIndicator, Share, Platform,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { apiGet, apiPost, apiPatch, apiDelete, centsToDisplay } from "@/lib/api";
 import colors from "@/constants/colors";
@@ -47,6 +48,8 @@ export default function MoreScreen() {
   const [kidAllowance, setKidAllowance] = useState("");
   const [choreName, setChoreName] = useState("");
   const [choreValue, setChoreValue] = useState("");
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const { data: kids = [] } = useQuery<Kid[]>({ queryKey: ["kids"], queryFn: () => apiGet("/kids") });
   const { data: chores = [] } = useQuery<Chore[]>({ queryKey: ["chores"], queryFn: () => apiGet("/chores") });
@@ -79,10 +82,48 @@ export default function MoreScreen() {
   const createInvite = useMutation({
     mutationFn: () => apiPost<{ token: string }>("/invitations"),
     onSuccess: (data) => {
-      Share.share({ message: `Join our Family Ledger household! Code: ${data.token}` });
+      setCopied(false);
+      setInviteCode(data.token);
     },
     onError: (e: any) => Alert.alert("Error", e.message),
   });
+
+  const inviteMessage = (code: string) =>
+    `Join our Family Ledger household! Open the app, choose "Join with invite code", and paste this code:\n\n${code}`;
+
+  const handleCopyCode = async () => {
+    if (!inviteCode) return;
+    try {
+      await Clipboard.setStringAsync(inviteCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      Alert.alert("Couldn't copy", "Please select and copy the code manually.");
+    }
+  };
+
+  const handleShareCode = async () => {
+    if (!inviteCode) return;
+    const message = inviteMessage(inviteCode);
+    if (Platform.OS === "web") {
+      const nav = typeof navigator !== "undefined" ? (navigator as any) : undefined;
+      try {
+        if (nav?.share) {
+          await nav.share({ title: "Family Ledger invite", text: message });
+        } else {
+          await handleCopyCode();
+        }
+      } catch {
+        // user dismissed the share sheet — no-op
+      }
+      return;
+    }
+    try {
+      await Share.share({ message });
+    } catch {
+      await handleCopyCode();
+    }
+  };
 
   const KID_COLORS = ["#8b6fff", "#10d9a0", "#ff6b72", "#60a5fa", "#fbbf24", "#f472b6"];
 
@@ -214,6 +255,33 @@ export default function MoreScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Invite Partner Modal */}
+      <Modal visible={inviteCode !== null} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Invite your partner</Text>
+            <Text style={styles.modalHint}>
+              Share this code with your partner. They sign up, choose “Join with invite code”, and paste it in. The code expires in 7 days.
+            </Text>
+            <TouchableOpacity style={styles.codeBox} onPress={handleCopyCode} activeOpacity={0.7}>
+              <Text style={styles.codeText} selectable numberOfLines={2}>{inviteCode}</Text>
+              <Text style={styles.codeCopyHint}>{copied ? "Copied ✓" : "Tap to copy"}</Text>
+            </TouchableOpacity>
+            <View style={styles.modalBtns}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={handleCopyCode}>
+                <Text style={styles.cancelTxt}>{copied ? "Copied ✓" : "Copy code"}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmBtn} onPress={handleShareCode}>
+                <Text style={styles.confirmTxt}>Share</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity style={styles.doneBtn} onPress={() => setInviteCode(null)}>
+              <Text style={styles.doneTxt}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -242,4 +310,9 @@ const styles = StyleSheet.create({
   cancelTxt: { fontFamily: "Inter_600SemiBold", color: C.mutedForeground, fontSize: 15 },
   confirmBtn: { flex: 1, backgroundColor: C.primary, borderRadius: 10, paddingVertical: 13, alignItems: "center" },
   confirmTxt: { fontFamily: "Inter_600SemiBold", color: C.primaryForeground, fontSize: 15 },
+  codeBox: { backgroundColor: C.background, borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 16, marginBottom: 16, alignItems: "center" },
+  codeText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: C.foreground, textAlign: "center", letterSpacing: 0.5 },
+  codeCopyHint: { fontFamily: "Inter_500Medium", fontSize: 12, color: C.primary, marginTop: 8 },
+  doneBtn: { paddingVertical: 14, alignItems: "center", marginTop: 4 },
+  doneTxt: { fontFamily: "Inter_500Medium", fontSize: 15, color: C.mutedForeground },
 });
