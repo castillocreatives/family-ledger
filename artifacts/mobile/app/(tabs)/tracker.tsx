@@ -39,6 +39,13 @@ function formatDayHeader(dateStr: string) {
   return `${DOW[d.getDay()]} · ${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 type ChoreState = "done" | "missed" | "none";
 
 export default function TrackerScreen() {
@@ -165,47 +172,70 @@ export default function TrackerScreen() {
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.kidScroll}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12, gap: 4 }}
       >
-        {kids.map(k => (
-          <TouchableOpacity
-            key={k.id}
-            style={[styles.kidPill, kidId === k.id && { backgroundColor: k.color }]}
-            onPress={() => setSelectedKidId(k.id)}
-          >
-            <Text style={[styles.kidPillTxt, kidId === k.id && { color: C.primaryForeground }]}>
-              {k.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        {kids.map(k => {
+          const active = kidId === k.id;
+          return (
+            <TouchableOpacity
+              key={k.id}
+              style={styles.kidItem}
+              onPress={() => setSelectedKidId(k.id)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.avatarRing, active && styles.avatarRingActive]}>
+                <View style={[styles.avatar, { backgroundColor: k.color }, !active && { opacity: 0.5 }]}>
+                  <Text style={styles.avatarTxt}>{initials(k.name)}</Text>
+                </View>
+              </View>
+              <Text
+                numberOfLines={1}
+                style={[styles.kidItemName, active && { color: C.foreground, fontFamily: "Inter_600SemiBold" }]}
+              >
+                {k.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primary} />}
       >
-        {/* Day header + net */}
-        {currentWeek && (
-          <View style={styles.dayHeader}>
-            <Text style={styles.dayLabel}>{formatDayHeader(todayStr)}</Text>
-            <View style={styles.dayNetPill}>
-              <Text style={styles.dayNetLabel}>day net</Text>
-              <Text style={[styles.dayNet, { color: dayNet >= 0 ? C.positive : C.negative }]}>
-                {dayNet >= 0 ? "+" : ""}{centsToDisplay(dayNet)}
-              </Text>
+        {/* Hero card — active kid + week total */}
+        {activeKid && (
+          <View style={styles.heroCard}>
+            <View style={[styles.heroAvatar, { backgroundColor: activeKid.color }]}>
+              <Text style={styles.heroAvatarTxt}>{initials(activeKid.name)}</Text>
             </View>
+            <View style={{ flex: 1, marginLeft: 14 }}>
+              <Text style={styles.heroName}>{activeKid.name}</Text>
+              {currentWeek ? (
+                <Text style={styles.heroSub}>
+                  {currentWeek.startDate.slice(5)} – {currentWeek.endDate.slice(5)}{!isOpen ? " · closed" : ""}
+                </Text>
+              ) : (
+                <Text style={styles.heroSub}>No open week</Text>
+              )}
+            </View>
+            {currentWeek && (
+              <View style={{ alignItems: "flex-end" }}>
+                <Text style={styles.heroTotalLabel}>WEEK TOTAL</Text>
+                <Text style={[styles.heroTotal, { color: (currentWeek.runningTotalCents ?? 0) >= 0 ? C.positive : C.negative }]}>
+                  {centsToDisplay(currentWeek.runningTotalCents)}
+                </Text>
+              </View>
+            )}
           </View>
         )}
 
-        {/* Week total banner */}
+        {/* Today + day net */}
         {currentWeek && (
-          <View style={styles.weekBanner}>
-            <Text style={styles.weekBannerLabel}>
-              {currentWeek.startDate.slice(5)} – {currentWeek.endDate.slice(5)}
-              {!isOpen ? " · closed" : ""}
-            </Text>
-            <Text style={[styles.weekBannerTotal, { color: (currentWeek.runningTotalCents ?? 0) >= 0 ? C.positive : C.negative }]}>
-              {centsToDisplay(currentWeek.runningTotalCents)}
+          <View style={styles.dayHeader}>
+            <Text style={styles.dayLabel}>{formatDayHeader(todayStr)}</Text>
+            <Text style={[styles.dayNet, { color: dayNet >= 0 ? C.positive : C.negative }]}>
+              {dayNet >= 0 ? "+" : ""}{centsToDisplay(dayNet)} <Text style={styles.dayNetLabel}>today</Text>
             </Text>
           </View>
         )}
@@ -419,20 +449,27 @@ export default function TrackerScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.background },
   center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: C.background, padding: 24 },
-  kidScroll: { backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  kidPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginRight: 8, backgroundColor: C.surface },
-  kidPillTxt: { fontFamily: "Inter_500Medium", fontSize: 14, color: C.foreground },
+  kidScroll: { backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border, flexGrow: 0 },
+  kidItem: { alignItems: "center", width: 64 },
+  avatarRing: { padding: 2.5, borderRadius: 30, borderWidth: 2, borderColor: "transparent" },
+  avatarRingActive: { borderColor: C.foreground },
+  avatar: { width: 48, height: 48, borderRadius: 24, justifyContent: "center", alignItems: "center" },
+  avatarTxt: { fontFamily: "Inter_700Bold", fontSize: 17, color: "#fff" },
+  kidItemName: { fontFamily: "Inter_500Medium", fontSize: 12, color: C.mutedForeground, marginTop: 6, maxWidth: 60 },
   scroll: { padding: 16 },
 
-  dayHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
-  dayLabel: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: C.foreground },
-  dayNetPill: { alignItems: "flex-end" },
-  dayNetLabel: { fontFamily: "Inter_400Regular", fontSize: 10, color: C.mutedForeground, letterSpacing: 0.6 },
-  dayNet: { fontFamily: "Inter_700Bold", fontSize: 22 },
+  heroCard: { flexDirection: "row", alignItems: "center", backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: 16, padding: 16, marginBottom: 16 },
+  heroAvatar: { width: 52, height: 52, borderRadius: 26, justifyContent: "center", alignItems: "center" },
+  heroAvatarTxt: { fontFamily: "Inter_700Bold", fontSize: 20, color: "#fff" },
+  heroName: { fontFamily: "Inter_700Bold", fontSize: 18, color: C.foreground },
+  heroSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: C.mutedForeground, marginTop: 3 },
+  heroTotalLabel: { fontFamily: "Inter_400Regular", fontSize: 10, color: C.mutedForeground, letterSpacing: 0.6 },
+  heroTotal: { fontFamily: "Inter_700Bold", fontSize: 22, marginTop: 2 },
 
-  weekBanner: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: C.surface, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 20 },
-  weekBannerLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: C.mutedForeground },
-  weekBannerTotal: { fontFamily: "Inter_700Bold", fontSize: 18 },
+  dayHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 },
+  dayLabel: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: C.foreground },
+  dayNetLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: C.mutedForeground, letterSpacing: 0.6 },
+  dayNet: { fontFamily: "Inter_700Bold", fontSize: 16 },
 
   sectionTitle: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: C.mutedForeground, letterSpacing: 1.2, marginBottom: 10 },
   choreRow: { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.border },
