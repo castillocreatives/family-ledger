@@ -1,37 +1,36 @@
 const palette = {
-  // Jet-black base (Aheadly / Neobank vibe)
-  background: "#0a0a0a",
-  card: "#141414",
-  surface: "#1e1e1e",
-  elevated: "#252525",
+  // Light mode — clean white base, indigo primary
+  background: "#f8f8f9",
+  card: "#ffffff",
+  surface: "#f2f2f7",
+  elevated: "#e8e8ee",
 
-  // Lime green = positive / primary action (Aheadly hero)
-  primary: "#b5fd6e",
-  primaryForeground: "#0a0a0a",
+  // Indigo = primary action (no green!)
+  primary: "#6366f1",
+  primaryForeground: "#ffffff",
 
-  // Purple = secondary / neutral actions
-  accent: "#a78bfa",
-  accentForeground: "#0a0a0a",
+  // Warm orange = accent / secondary
+  accent: "#f97316",
+  accentForeground: "#ffffff",
+  secondary: "#f97316",
+  secondaryForeground: "#ffffff",
 
-  secondary: "#a78bfa",
-  secondaryForeground: "#0a0a0a",
+  foreground: "#111118",
+  mutedForeground: "#71717a",
 
-  foreground: "#f0f0f0",
-  mutedForeground: "#6b6b6b",
+  border: "#e4e4e7",
+  input: "#f4f4f5",
 
-  border: "#262626",
-  input: "#1e1e1e",
+  // Semantic — standard readable green/red (not lime)
+  positive: "#16a34a",
+  negative: "#ef4444",
 
-  // Semantic
-  positive: "#b5fd6e",    // lime green
-  negative: "#ff5f5f",    // vivid coral-red
+  muted: "#f4f4f5",
+  destructive: "#ef4444",
+  destructiveForeground: "#ffffff",
 
-  muted: "#1e1e1e",
-  destructive: "#ff5f5f",
-  destructiveForeground: "#f0f0f0",
-
-  text: "#f0f0f0",
-  tint: "#b5fd6e",
+  text: "#111118",
+  tint: "#6366f1",
 };
 
 const colors = {

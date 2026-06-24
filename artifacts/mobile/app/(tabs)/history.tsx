@@ -145,18 +145,18 @@ const styles = StyleSheet.create({
 
   weekGroup: { marginBottom: 20 },
   weekHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: C.border, marginBottom: 2 },
-  weekDateRange: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 15, color: C.foreground },
-  weekClosedDow: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 12, color: C.mutedForeground },
+  weekDateRange: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: C.foreground },
+  weekClosedDow: { fontFamily: "Inter_400Regular", fontSize: 12, color: C.mutedForeground },
 
   kidRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: C.border + "80" },
   kidDot: { width: 8, height: 8, borderRadius: 4, marginRight: 10 },
-  kidRowName: { fontFamily: "SpaceGrotesk_500Medium", fontSize: 15, color: C.foreground, width: 70 },
+  kidRowName: { fontFamily: "Inter_500Medium", fontSize: 15, color: C.foreground, width: 70 },
   kidRowRight: { flex: 1, alignItems: "flex-end" },
-  kidRowResult: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 14, color: C.mutedForeground },
+  kidRowResult: { fontFamily: "Inter_400Regular", fontSize: 14, color: C.mutedForeground },
 
   emptyCard: { backgroundColor: C.card, borderRadius: 14, padding: 24, alignItems: "center", borderWidth: 1, borderColor: C.border },
-  emptyTitle: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 17, color: C.foreground, marginBottom: 6 },
-  emptyBody: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 13, color: C.mutedForeground, textAlign: "center" },
+  emptyTitle: { fontFamily: "Inter_600SemiBold", fontSize: 17, color: C.foreground, marginBottom: 6 },
+  emptyBody: { fontFamily: "Inter_400Regular", fontSize: 13, color: C.mutedForeground, textAlign: "center" },
 
-  endLabel: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 12, color: C.mutedForeground, textAlign: "center", marginTop: 8 },
+  endLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: C.mutedForeground, textAlign: "center", marginTop: 8 },
 });

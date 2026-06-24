@@ -33,7 +33,7 @@ export default function TabLayout() {
         headerShown: true,
         headerStyle: { backgroundColor: C.background },
         headerTintColor: C.foreground,
-        headerTitleStyle: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 17 },
+        headerTitleStyle: { fontFamily: "Inter_600SemiBold", fontSize: 17 },
         headerShadowVisible: false,
         tabBarStyle: {
           position: "absolute",
@@ -43,7 +43,7 @@ export default function TabLayout() {
           elevation: 0,
           height: Platform.OS === "web" ? 84 : undefined,
         },
-        tabBarLabelStyle: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 11 },
+        tabBarLabelStyle: { fontFamily: "Inter_600SemiBold", fontSize: 11 },
         tabBarBackground: () =>
           isIOS ? (
             <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFill} />

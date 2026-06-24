@@ -111,7 +111,7 @@ export default function MoneyScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
-      <Stack.Screen options={{ title: `${kid.name}'s money`, headerShown: true, headerStyle: { backgroundColor: C.background }, headerTintColor: C.foreground, headerTitleStyle: { fontFamily: "SpaceGrotesk_600SemiBold" }, headerShadowVisible: false }} />
+      <Stack.Screen options={{ title: `${kid.name}'s money`, headerShown: true, headerStyle: { backgroundColor: C.background }, headerTintColor: C.foreground, headerTitleStyle: { fontFamily: "Inter_600SemiBold" }, headerShadowVisible: false }} />
       <ScrollView contentContainerStyle={styles.scroll}>
 
         {/* Buckets */}
@@ -283,46 +283,46 @@ const styles = StyleSheet.create({
 
   bucketsRow: { flexDirection: "row", gap: 12, marginBottom: 16 },
   bucket: { flex: 1, backgroundColor: C.card, borderRadius: 14, padding: 16, borderWidth: 1 },
-  bucketLabel: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 10, color: C.mutedForeground, letterSpacing: 1.2, marginBottom: 6 },
-  bucketAmount: { fontFamily: "SpaceGrotesk_700Bold", fontSize: 28, letterSpacing: -0.5 },
+  bucketLabel: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: C.mutedForeground, letterSpacing: 1.2, marginBottom: 6 },
+  bucketAmount: { fontFamily: "Inter_700Bold", fontSize: 28, letterSpacing: -0.5 },
 
   goalCard: { backgroundColor: C.card, borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: C.border },
-  sectionTitle: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 10, color: C.mutedForeground, letterSpacing: 1.2, marginBottom: 8 },
+  sectionTitle: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: C.mutedForeground, letterSpacing: 1.2, marginBottom: 8 },
   goalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 },
-  goalName: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 17, color: C.foreground },
-  goalRemaining: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 13, color: C.mutedForeground },
+  goalName: { fontFamily: "Inter_600SemiBold", fontSize: 17, color: C.foreground },
+  goalRemaining: { fontFamily: "Inter_400Regular", fontSize: 13, color: C.mutedForeground },
   progressBg: { height: 6, backgroundColor: C.border, borderRadius: 3, overflow: "hidden", marginBottom: 6 },
   progressFill: { height: 6, borderRadius: 3 },
-  goalProgress: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 12, color: C.mutedForeground },
-  emptyGoal: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 14, color: C.mutedForeground },
+  goalProgress: { fontFamily: "Inter_400Regular", fontSize: 12, color: C.mutedForeground },
+  emptyGoal: { fontFamily: "Inter_400Regular", fontSize: 14, color: C.mutedForeground },
 
   planCard: { backgroundColor: C.card, borderRadius: 14, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: C.border },
   planRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  planLabel: { fontFamily: "SpaceGrotesk_500Medium", fontSize: 16, color: C.foreground },
+  planLabel: { fontFamily: "Inter_500Medium", fontSize: 16, color: C.foreground },
   editBtn: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: C.surface, borderRadius: 10 },
-  editBtnTxt: { fontFamily: "SpaceGrotesk_500Medium", fontSize: 13, color: C.primary },
+  editBtnTxt: { fontFamily: "Inter_500Medium", fontSize: 13, color: C.primary },
 
   newGoalBtn: { backgroundColor: C.card, borderRadius: 14, paddingVertical: 15, alignItems: "center", borderWidth: 1, borderColor: C.primary + "60", marginBottom: 20 },
-  newGoalBtnTxt: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 15, color: C.primary },
+  newGoalBtnTxt: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: C.primary },
 
   completedSection: { marginTop: 4 },
   completedRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.border },
-  completedName: { fontFamily: "SpaceGrotesk_500Medium", fontSize: 14, color: C.mutedForeground },
-  completedAmt: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 14, color: C.mutedForeground },
+  completedName: { fontFamily: "Inter_500Medium", fontSize: 14, color: C.mutedForeground },
+  completedAmt: { fontFamily: "Inter_400Regular", fontSize: 14, color: C.mutedForeground },
 
   modalOverlay: { flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" },
   modalCard: { backgroundColor: C.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 44 },
-  modalTitle: { fontFamily: "SpaceGrotesk_700Bold", fontSize: 18, color: C.foreground, marginBottom: 16 },
-  input: { backgroundColor: C.background, color: C.foreground, fontFamily: "SpaceGrotesk_400Regular", borderWidth: 1, borderColor: C.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, marginBottom: 12 },
+  modalTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: C.foreground, marginBottom: 16 },
+  input: { backgroundColor: C.background, color: C.foreground, fontFamily: "Inter_400Regular", borderWidth: 1, borderColor: C.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, marginBottom: 12 },
   modalBtns: { flexDirection: "row", gap: 10 },
   cancelBtn: { flex: 1, backgroundColor: C.surface, borderRadius: 10, paddingVertical: 13, alignItems: "center" },
-  cancelTxt: { fontFamily: "SpaceGrotesk_600SemiBold", color: C.mutedForeground, fontSize: 15 },
+  cancelTxt: { fontFamily: "Inter_600SemiBold", color: C.mutedForeground, fontSize: 15 },
   confirmBtn: { flex: 1, backgroundColor: C.primary, borderRadius: 10, paddingVertical: 13, alignItems: "center" },
-  confirmTxt: { fontFamily: "SpaceGrotesk_600SemiBold", color: C.primaryForeground, fontSize: 15 },
+  confirmTxt: { fontFamily: "Inter_600SemiBold", color: C.primaryForeground, fontSize: 15 },
 
   modeRow: { flexDirection: "row", gap: 8, marginBottom: 14 },
   modePill: { flex: 1, backgroundColor: C.surface, borderRadius: 10, paddingVertical: 10, alignItems: "center" },
-  modePillTxt: { fontFamily: "SpaceGrotesk_500Medium", fontSize: 13, color: C.foreground },
+  modePillTxt: { fontFamily: "Inter_500Medium", fontSize: 13, color: C.foreground },
   splitRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  splitLabel: { fontFamily: "SpaceGrotesk_500Medium", fontSize: 15, color: C.foreground },
+  splitLabel: { fontFamily: "Inter_500Medium", fontSize: 15, color: C.foreground },
 });

@@ -132,7 +132,7 @@ export default function MoreScreen() {
               <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
                 <Text style={styles.rowValue}>{centsToDisplay(c.valueCents)}</Text>
                 <TouchableOpacity onPress={() => toggleChore.mutate({ id: c.id, active: !c.active })}>
-                  <Text style={{ fontFamily: "SpaceGrotesk_500Medium", fontSize: 12, color: c.active ? C.positive : C.mutedForeground }}>
+                  <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: c.active ? C.positive : C.mutedForeground }}>
                     {c.active ? "Active" : "Off"}
                   </Text>
                 </TouchableOpacity>
@@ -220,23 +220,23 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.background },
   scroll: { paddingBottom: 110 },
   section: { marginBottom: 4 },
-  sectionTitle: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 12, color: C.mutedForeground, letterSpacing: 0.8, paddingHorizontal: 16, paddingTop: 20, paddingBottom: 6 },
+  sectionTitle: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: C.mutedForeground, letterSpacing: 0.8, paddingHorizontal: 16, paddingTop: 20, paddingBottom: 6 },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14, backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  rowLabel: { fontFamily: "SpaceGrotesk_500Medium", fontSize: 16, color: C.foreground },
-  rowValue: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 14, color: C.mutedForeground },
-  rowChevron: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 20, color: C.mutedForeground },
+  rowLabel: { fontFamily: "Inter_500Medium", fontSize: 16, color: C.foreground },
+  rowValue: { fontFamily: "Inter_400Regular", fontSize: 14, color: C.mutedForeground },
+  rowChevron: { fontFamily: "Inter_400Regular", fontSize: 20, color: C.mutedForeground },
   addBtn: { paddingHorizontal: 16, paddingVertical: 13, backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  addBtnTxt: { fontFamily: "SpaceGrotesk_500Medium", fontSize: 15, color: C.primary },
+  addBtnTxt: { fontFamily: "Inter_500Medium", fontSize: 15, color: C.primary },
   modalOverlay: { flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" },
   modalCard: { backgroundColor: C.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40 },
-  modalTitle: { fontFamily: "SpaceGrotesk_700Bold", fontSize: 18, color: C.foreground, marginBottom: 16 },
-  input: { backgroundColor: C.background, color: C.foreground, fontFamily: "SpaceGrotesk_400Regular", borderWidth: 1, borderColor: C.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, marginBottom: 12 },
+  modalTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: C.foreground, marginBottom: 16 },
+  input: { backgroundColor: C.background, color: C.foreground, fontFamily: "Inter_400Regular", borderWidth: 1, borderColor: C.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, marginBottom: 12 },
   colorRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
   colorDot: { width: 34, height: 34, borderRadius: 17 },
   colorDotActive: { borderWidth: 3, borderColor: C.foreground },
   modalBtns: { flexDirection: "row", gap: 10 },
   cancelBtn: { flex: 1, backgroundColor: C.surface, borderRadius: 10, paddingVertical: 13, alignItems: "center" },
-  cancelTxt: { fontFamily: "SpaceGrotesk_600SemiBold", color: C.mutedForeground, fontSize: 15 },
+  cancelTxt: { fontFamily: "Inter_600SemiBold", color: C.mutedForeground, fontSize: 15 },
   confirmBtn: { flex: 1, backgroundColor: C.primary, borderRadius: 10, paddingVertical: 13, alignItems: "center" },
-  confirmTxt: { fontFamily: "SpaceGrotesk_600SemiBold", color: C.primaryForeground, fontSize: 15 },
+  confirmTxt: { fontFamily: "Inter_600SemiBold", color: C.primaryForeground, fontSize: 15 },
 });

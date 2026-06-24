@@ -40,10 +40,10 @@ function LedgerLine({ label, amount, bold }: { label: string; amount: number; bo
   const formatted = (amount >= 0 ? "+" : "") + centsToDisplay(amount);
   return (
     <View style={styles.ledgerLine}>
-      <Text style={[styles.ledgerLabel, bold && { color: C.foreground, fontFamily: "SpaceGrotesk_600SemiBold" }]}>
+      <Text style={[styles.ledgerLabel, bold && { color: C.foreground, fontFamily: "Inter_600SemiBold" }]}>
         {label}
       </Text>
-      <Text style={[styles.ledgerAmt, bold && { fontFamily: "SpaceGrotesk_700Bold", fontSize: 17 }, { color: bold ? (isPos ? C.positive : C.negative) : (isPos ? C.foreground : C.negative) }]}>
+      <Text style={[styles.ledgerAmt, bold && { fontFamily: "Inter_700Bold", fontSize: 17 }, { color: bold ? (isPos ? C.positive : C.negative) : (isPos ? C.foreground : C.negative) }]}>
         {amount === 0 && !bold ? "$0" : formatted}
       </Text>
     </View>
@@ -89,7 +89,7 @@ function KidLedger({ detail }: { detail: WeekDetail }) {
         ) : (
           <Text style={[styles.outcomeText, { color: C.negative }]}>
             Negative — {centsToDisplay(Math.abs(total))} rolls over. Next week opens at{" "}
-            <Text style={{ fontFamily: "SpaceGrotesk_700Bold" }}>
+            <Text style={{ fontFamily: "Inter_700Bold" }}>
               {centsToDisplay(detail.openingBalanceCents + total)}
             </Text>
             , not {centsToDisplay(detail.openingBalanceCents)}.
@@ -310,37 +310,37 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: C.background },
   scroll: { padding: 16, paddingBottom: 120 },
 
-  pageLabel: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 11, color: C.mutedForeground, letterSpacing: 1.4, marginBottom: 4 },
-  pageTitle: { fontFamily: "SpaceGrotesk_700Bold", fontSize: 26, color: C.foreground, marginBottom: 4, letterSpacing: -0.5 },
-  pageDesc: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 14, color: C.mutedForeground, marginBottom: 24 },
+  pageLabel: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: C.mutedForeground, letterSpacing: 1.4, marginBottom: 4 },
+  pageTitle: { fontFamily: "Inter_700Bold", fontSize: 26, color: C.foreground, marginBottom: 4, letterSpacing: -0.5 },
+  pageDesc: { fontFamily: "Inter_400Regular", fontSize: 14, color: C.mutedForeground, marginBottom: 24 },
 
   kidCard: { backgroundColor: C.card, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: C.border },
-  kidName: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 17, color: C.foreground, marginBottom: 14 },
+  kidName: { fontFamily: "Inter_600SemiBold", fontSize: 17, color: C.foreground, marginBottom: 14 },
 
   ledgerBlock: { gap: 6 },
   ledgerLine: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  ledgerLabel: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 14, color: C.mutedForeground, flex: 1 },
-  ledgerAmt: { fontFamily: "SpaceGrotesk_500Medium", fontSize: 14, color: C.foreground },
+  ledgerLabel: { fontFamily: "Inter_400Regular", fontSize: 14, color: C.mutedForeground, flex: 1 },
+  ledgerAmt: { fontFamily: "Inter_500Medium", fontSize: 14, color: C.foreground },
   ledgerDivider: { height: 1, backgroundColor: C.border, marginVertical: 10 },
 
   outcomeNote: { marginTop: 12, borderRadius: 10, padding: 12 },
-  outcomeText: { fontFamily: "SpaceGrotesk_500Medium", fontSize: 13, lineHeight: 19 },
+  outcomeText: { fontFamily: "Inter_500Medium", fontSize: 13, lineHeight: 19 },
 
   primaryBtn: { backgroundColor: C.primary, borderRadius: 14, paddingVertical: 16, alignItems: "center", marginTop: 8 },
   btnDisabled: { opacity: 0.6 },
-  primaryBtnTxt: { fontFamily: "SpaceGrotesk_600SemiBold", color: C.primaryForeground, fontSize: 16 },
+  primaryBtnTxt: { fontFamily: "Inter_600SemiBold", color: C.primaryForeground, fontSize: 16 },
   skipBtn: { alignItems: "center", marginTop: 14 },
-  skipTxt: { fontFamily: "SpaceGrotesk_500Medium", color: C.mutedForeground, fontSize: 14 },
+  skipTxt: { fontFamily: "Inter_500Medium", color: C.mutedForeground, fontSize: 14 },
 
   payoutGrid: { flexDirection: "row", justifyContent: "space-around", marginTop: 6 },
   payoutItem: { alignItems: "center" },
-  payoutNum: { fontFamily: "SpaceGrotesk_700Bold", fontSize: 20, color: C.foreground },
-  payoutLbl: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 11, color: C.mutedForeground, marginTop: 2 },
-  rollNote: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 12, textAlign: "center", marginTop: 10 },
+  payoutNum: { fontFamily: "Inter_700Bold", fontSize: 20, color: C.foreground },
+  payoutLbl: { fontFamily: "Inter_400Regular", fontSize: 11, color: C.mutedForeground, marginTop: 2 },
+  rollNote: { fontFamily: "Inter_400Regular", fontSize: 12, textAlign: "center", marginTop: 10 },
 
   goalBanner: { marginTop: 12, backgroundColor: C.primary + "20", borderRadius: 8, padding: 10, alignItems: "center" },
-  goalBannerTxt: { fontFamily: "SpaceGrotesk_600SemiBold", color: C.primary, fontSize: 14 },
+  goalBannerTxt: { fontFamily: "Inter_600SemiBold", color: C.primary, fontSize: 14 },
 
   closedNote: { backgroundColor: C.card, borderRadius: 12, padding: 20, alignItems: "center", borderWidth: 1, borderColor: C.border, marginBottom: 16 },
-  closedNoteTxt: { fontFamily: "SpaceGrotesk_400Regular", color: C.mutedForeground, fontSize: 14 },
+  closedNoteTxt: { fontFamily: "Inter_400Regular", color: C.mutedForeground, fontSize: 14 },
 });
