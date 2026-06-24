@@ -15,3 +15,6 @@ The Replit mobile preview renders the Expo app as **react-native-web** (URL `*.e
 Always give visible feedback (modal with the value + "Copy"/"Copied ✓") rather than relying solely on a system share sheet. Use `expo-clipboard` (`Clipboard.setStringAsync`) — installed in @workspace/mobile.
 
 The household invite flow is a code (token) pasted into Onboarding → "Join with invite code" → POST /invitations/accept. It is not a deep link; the share message just carries the code.
+
+## `Alert.alert` with buttons also breaks on web
+`Alert.alert(title, msg, [buttons])` on react-native-web shows the message but **does not fire button `onPress` callbacks**. Any confirm/destructive action wired through Alert buttons (sign out, delete kid/chore) silently does nothing in the preview. Use a state-driven `<Modal>` confirm instead (see the sign-out / invite modals in `more.tsx`). Single-button informational `Alert.alert(title, msg)` is fine.

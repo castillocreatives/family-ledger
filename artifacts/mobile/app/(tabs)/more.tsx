@@ -50,6 +50,7 @@ export default function MoreScreen() {
   const [choreValue, setChoreValue] = useState("");
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [signOutConfirm, setSignOutConfirm] = useState(false);
 
   const { data: kids = [] } = useQuery<Kid[]>({ queryKey: ["kids"], queryFn: () => apiGet("/kids") });
   const { data: chores = [] } = useQuery<Chore[]>({ queryKey: ["chores"], queryFn: () => apiGet("/chores") });
@@ -122,6 +123,15 @@ export default function MoreScreen() {
       await Share.share({ message });
     } catch {
       await handleCopyCode();
+    }
+  };
+
+  const handleSignOut = async () => {
+    setSignOutConfirm(false);
+    try {
+      await signOut();
+    } catch (e: any) {
+      Alert.alert("Couldn't sign out", e?.message ?? "Please try again.");
     }
   };
 
@@ -200,10 +210,7 @@ export default function MoreScreen() {
 
         {/* Account */}
         <Section title="Account">
-          <Row label="Sign out" destructive onPress={() => Alert.alert("Sign out?", undefined, [
-            { text: "Cancel" },
-            { text: "Sign out", style: "destructive", onPress: () => signOut() },
-          ])} />
+          <Row label="Sign out" destructive onPress={() => setSignOutConfirm(true)} />
         </Section>
       </ScrollView>
 
@@ -279,6 +286,24 @@ export default function MoreScreen() {
             <TouchableOpacity style={styles.doneBtn} onPress={() => setInviteCode(null)}>
               <Text style={styles.doneTxt}>Done</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Sign Out Confirm Modal */}
+      <Modal visible={signOutConfirm} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Sign out?</Text>
+            <Text style={styles.modalHint}>You'll need to sign back in to manage your household.</Text>
+            <View style={styles.modalBtns}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setSignOutConfirm(false)}>
+                <Text style={styles.cancelTxt}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.confirmBtn, { backgroundColor: C.negative }]} onPress={handleSignOut}>
+                <Text style={styles.confirmTxt}>Sign out</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
