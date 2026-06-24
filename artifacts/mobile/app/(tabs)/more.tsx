@@ -51,6 +51,7 @@ export default function MoreScreen() {
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [signOutConfirm, setSignOutConfirm] = useState(false);
+  const [confirmDeleteKid, setConfirmDeleteKid] = useState(false);
 
   const { data: kids = [] } = useQuery<Kid[]>({ queryKey: ["kids"], queryFn: () => apiGet("/kids") });
   const { data: chores = [] } = useQuery<Chore[]>({ queryKey: ["chores"], queryFn: () => apiGet("/chores") });
@@ -60,13 +61,24 @@ export default function MoreScreen() {
   });
   const { data: household } = useQuery<Household>({ queryKey: ["household"], queryFn: () => apiGet("/households/me") });
 
+  const resetKidForm = () => { setKidName(""); setKidColor("#d8a657"); setKidAllowance(""); };
+  const closeKidModal = () => { setKidModal({ visible: false }); setConfirmDeleteKid(false); resetKidForm(); };
+  const refreshKids = () => { qc.invalidateQueries({ queryKey: ["kids"] }); qc.invalidateQueries({ queryKey: ["dashboard"] }); };
+
   const createKid = useMutation({
     mutationFn: (body: object) => apiPost<Kid>("/kids", body),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["kids"] }); qc.invalidateQueries({ queryKey: ["dashboard"] }); },
+    onSuccess: () => { refreshKids(); closeKidModal(); },
+    onError: (e: any) => Alert.alert("Couldn't save kid", e?.message ?? "Please try again."),
+  });
+  const updateKid = useMutation({
+    mutationFn: ({ id, body }: { id: number; body: object }) => apiPatch<Kid>(`/kids/${id}`, body),
+    onSuccess: () => { refreshKids(); closeKidModal(); },
+    onError: (e: any) => Alert.alert("Couldn't save kid", e?.message ?? "Please try again."),
   });
   const deleteKid = useMutation({
     mutationFn: (id: number) => apiDelete(`/kids/${id}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["kids"] }); qc.invalidateQueries({ queryKey: ["dashboard"] }); },
+    onSuccess: () => { refreshKids(); closeKidModal(); },
+    onError: (e: any) => Alert.alert("Couldn't delete kid", e?.message ?? "Please try again."),
   });
   const createChore = useMutation({
     mutationFn: (body: object) => apiPost<Chore>("/chores", body),
@@ -137,12 +149,31 @@ export default function MoreScreen() {
 
   const KID_COLORS = ["#8b6fff", "#10d9a0", "#ff6b72", "#60a5fa", "#fbbf24", "#f472b6"];
 
+  const openKidModal = (kid?: Kid) => {
+    setConfirmDeleteKid(false);
+    if (kid) {
+      setKidName(kid.name);
+      setKidColor(kid.color);
+      setKidAllowance((kid.baseAllowanceCents / 100).toFixed(2));
+    } else {
+      resetKidForm();
+    }
+    setKidModal({ visible: true, kid });
+  };
+
   const handleSaveKid = () => {
     if (!kidName.trim()) { Alert.alert("Name is required"); return; }
     const cents = kidAllowance ? Math.round(parseFloat(kidAllowance) * 100) : undefined;
-    createKid.mutate({ name: kidName.trim(), color: kidColor, baseAllowanceCents: cents });
-    setKidName(""); setKidColor("#d8a657"); setKidAllowance("");
-    setKidModal({ visible: false });
+    if (cents !== undefined && (isNaN(cents) || cents < 0)) {
+      Alert.alert("Enter a valid allowance, or leave it blank for the household default");
+      return;
+    }
+    const body = { name: kidName.trim(), color: kidColor, baseAllowanceCents: cents };
+    if (kidModal.kid) {
+      updateKid.mutate({ id: kidModal.kid.id, body });
+    } else {
+      createKid.mutate(body);
+    }
   };
 
   const handleSaveChore = () => {
@@ -165,13 +196,10 @@ export default function MoreScreen() {
               key={k.id}
               label={k.name}
               value={centsToDisplay(k.baseAllowanceCents) + "/wk"}
-              onPress={() => Alert.alert(k.name, "Delete this kid?", [
-                { text: "Cancel" },
-                { text: "Delete", style: "destructive", onPress: () => deleteKid.mutate(k.id) },
-              ])}
+              onPress={() => openKidModal(k)}
             />
           ))}
-          <TouchableOpacity style={styles.addBtn} onPress={() => setKidModal({ visible: true })}>
+          <TouchableOpacity style={styles.addBtn} onPress={() => openKidModal()}>
             <Text style={styles.addBtnTxt}>+ Add kid</Text>
           </TouchableOpacity>
         </Section>
@@ -218,27 +246,46 @@ export default function MoreScreen() {
       <Modal visible={kidModal.visible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Add a kid</Text>
-            <TextInput style={styles.input} placeholder="Name" placeholderTextColor={C.mutedForeground} value={kidName} onChangeText={setKidName} />
-            <TextInput style={styles.input} placeholder="Weekly allowance (e.g. 5.00)" placeholderTextColor={C.mutedForeground} value={kidAllowance} onChangeText={setKidAllowance} keyboardType="decimal-pad" />
+            <Text style={styles.modalTitle}>{kidModal.kid ? "Edit kid" : "Add a kid"}</Text>
+            <TextInput style={styles.input} placeholder="Name" placeholderTextColor={C.mutedForeground} value={kidName} onChangeText={(t) => { setKidName(t); setConfirmDeleteKid(false); }} />
+            <TextInput style={styles.input} placeholder="Weekly allowance (e.g. 5.00)" placeholderTextColor={C.mutedForeground} value={kidAllowance} onChangeText={(t) => { setKidAllowance(t); setConfirmDeleteKid(false); }} keyboardType="decimal-pad" />
             <Text style={[styles.sectionTitle, { marginBottom: 8 }]}>Color</Text>
             <View style={styles.colorRow}>
               {KID_COLORS.map(col => (
                 <TouchableOpacity
                   key={col}
                   style={[styles.colorDot, { backgroundColor: col }, kidColor === col && styles.colorDotActive]}
-                  onPress={() => setKidColor(col)}
+                  onPress={() => { setKidColor(col); setConfirmDeleteKid(false); }}
                 />
               ))}
             </View>
             <View style={styles.modalBtns}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setKidModal({ visible: false })}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={closeKidModal}>
                 <Text style={styles.cancelTxt}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmBtn} onPress={handleSaveKid}>
-                <Text style={styles.confirmTxt}>Add kid</Text>
+              <TouchableOpacity style={styles.confirmBtn} onPress={handleSaveKid} disabled={createKid.isPending || updateKid.isPending}>
+                {createKid.isPending || updateKid.isPending
+                  ? <ActivityIndicator color="#fff" />
+                  : <Text style={styles.confirmTxt}>{kidModal.kid ? "Save" : "Add kid"}</Text>}
               </TouchableOpacity>
             </View>
+            {kidModal.kid && (
+              <TouchableOpacity
+                style={styles.deleteBtn}
+                onPress={() => {
+                  if (confirmDeleteKid) {
+                    deleteKid.mutate(kidModal.kid!.id);
+                  } else {
+                    setConfirmDeleteKid(true);
+                  }
+                }}
+                disabled={deleteKid.isPending}
+              >
+                {deleteKid.isPending
+                  ? <ActivityIndicator color={C.negative} />
+                  : <Text style={styles.deleteTxt}>{confirmDeleteKid ? "Tap again to delete" : "Delete kid"}</Text>}
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </Modal>
@@ -340,4 +387,6 @@ const styles = StyleSheet.create({
   codeCopyHint: { fontFamily: "Inter_500Medium", fontSize: 12, color: C.primary, marginTop: 8 },
   doneBtn: { paddingVertical: 14, alignItems: "center", marginTop: 4 },
   doneTxt: { fontFamily: "Inter_500Medium", fontSize: 15, color: C.mutedForeground },
+  deleteBtn: { paddingVertical: 14, alignItems: "center", marginTop: 4 },
+  deleteTxt: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: C.negative },
 });
