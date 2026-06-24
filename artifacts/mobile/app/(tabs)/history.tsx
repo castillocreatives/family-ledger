@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from "react-native";
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { apiGet, centsToDisplay } from "@/lib/api";
 import colors from "@/constants/colors";
@@ -11,107 +11,129 @@ type Kid = { id: number; name: string; color: string };
 type WeekSummary = {
   id: number; kidId: number; kidName: string; kidColor: string;
   startDate: string; endDate: string;
-  openingBalanceCents: number; runningTotalCents: number; netChangeCents: number;
+  openingBalanceCents: number; runningTotalCents: number;
   status: string; paidOutCents: number | null; rolledOverCents: number | null;
   choresDone: number; choresMissed: number;
 };
 
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+function fmt(dateStr: string) {
+  const [, m, d] = dateStr.split("-");
+  return `${MONTHS[parseInt(m) - 1]} ${parseInt(d)}`;
+}
+
+function closedDow(dateStr: string) {
+  const d = new Date(dateStr + "T12:00:00");
+  return DOW[d.getDay()];
+}
+
+type WeekGroup = {
+  startDate: string;
+  endDate: string;
+  rows: WeekSummary[];
+};
+
+function groupByWeek(allWeeks: WeekSummary[]): WeekGroup[] {
+  const map = new Map<string, WeekGroup>();
+  for (const w of allWeeks) {
+    const key = w.startDate;
+    if (!map.has(key)) {
+      map.set(key, { startDate: w.startDate, endDate: w.endDate, rows: [] });
+    }
+    map.get(key)!.rows.push(w);
+  }
+  return Array.from(map.values()).sort((a, b) => b.startDate.localeCompare(a.startDate));
+}
+
 export default function HistoryScreen() {
-  const [selectedKidId, setSelectedKidId] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const { data: kids = [] } = useQuery<Kid[]>({
+  const { data: kids = [], isLoading: kidsLoading } = useQuery<Kid[]>({
     queryKey: ["kids"],
     queryFn: () => apiGet("/kids"),
   });
 
-  const activeKid = selectedKidId ? kids.find(k => k.id === selectedKidId) : kids[0];
-
-  const { data: weeks = [], isLoading, refetch } = useQuery<WeekSummary[]>({
-    queryKey: ["kid-weeks", activeKid?.id],
-    queryFn: () => apiGet(`/kids/${activeKid!.id}/weeks`),
-    enabled: !!activeKid?.id,
+  const weekQueries = useQueries({
+    queries: kids.map(k => ({
+      queryKey: ["kid-weeks", k.id],
+      queryFn: () => apiGet<WeekSummary[]>(`/kids/${k.id}/weeks`),
+      enabled: kids.length > 0,
+    })),
   });
+
+  const allLoading = kidsLoading || weekQueries.some(q => q.isLoading);
+  const allWeeks: WeekSummary[] = weekQueries.flatMap(q => q.data ?? []);
+  const closedWeeks = allWeeks.filter(w => w.status === "closed");
+  const groups = groupByWeek(closedWeeks);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await refetch();
+    await Promise.all(weekQueries.map(q => q.refetch()));
     setRefreshing(false);
   };
 
+  if (allLoading && !closedWeeks.length) {
+    return <View style={styles.center}><ActivityIndicator color={C.primary} /></View>;
+  }
+
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
-      {/* Kid tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.kidScroll} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10 }}>
-        {kids.map(k => (
-          <TouchableOpacity
-            key={k.id}
-            style={[styles.kidPill, activeKid?.id === k.id && { backgroundColor: k.color }]}
-            onPress={() => setSelectedKidId(k.id)}
-          >
-            <Text style={[styles.kidPillTxt, activeKid?.id === k.id && { color: C.primaryForeground }]}>{k.name}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primary} />}
+      >
+        {groups.length === 0 && (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>No history yet</Text>
+            <Text style={styles.emptyBody}>Closed weeks will appear here as a running ledger.</Text>
+          </View>
+        )}
 
-      {isLoading ? (
-        <View style={styles.center}><ActivityIndicator color={C.primary} /></View>
-      ) : (
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primary} />}
-        >
-          {weeks.length === 0 && (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>No history yet</Text>
-              <Text style={styles.emptyBody}>Weeks will appear here after they're closed.</Text>
+        {groups.map(group => (
+          <View key={group.startDate} style={styles.weekGroup}>
+            {/* Week header */}
+            <View style={styles.weekHeaderRow}>
+              <Text style={styles.weekDateRange}>{fmt(group.startDate)} – {fmt(group.endDate)}</Text>
+              <Text style={styles.weekClosedDow}>closed {closedDow(group.endDate)}</Text>
             </View>
-          )}
 
-          {weeks.map(w => {
-            const isPos = w.runningTotalCents >= 0;
-            const isClosed = w.status === "closed";
-            return (
-              <View key={w.id} style={[styles.weekCard, { borderLeftColor: w.kidColor, borderLeftWidth: 3 }]}>
-                <View style={styles.weekRow}>
-                  <View>
-                    <Text style={styles.weekDates}>{w.startDate} – {w.endDate}</Text>
-                    <Text style={[styles.statusBadge, { color: isClosed ? C.positive : C.primary }]}>
-                      {isClosed ? "Closed" : "Open"}
-                    </Text>
+            {/* Per-kid rows */}
+            {group.rows.map(w => {
+              const paid = w.paidOutCents !== null && w.paidOutCents > 0;
+              const rolled = w.rolledOverCents !== null && w.rolledOverCents < 0;
+              return (
+                <View key={w.id} style={styles.kidRow}>
+                  <View style={[styles.kidDot, { backgroundColor: w.kidColor }]} />
+                  <Text style={styles.kidRowName}>{w.kidName}</Text>
+                  <View style={styles.kidRowRight}>
+                    {paid && (
+                      <Text style={[styles.kidRowResult, { color: C.positive }]}>
+                        paid {centsToDisplay(w.paidOutCents!)}
+                      </Text>
+                    )}
+                    {rolled && (
+                      <Text style={[styles.kidRowResult, { color: C.negative }]}>
+                        rolled {centsToDisplay(w.rolledOverCents!)} → opened {centsToDisplay(w.openingBalanceCents + w.rolledOverCents!)}
+                      </Text>
+                    )}
+                    {!paid && !rolled && (
+                      <Text style={styles.kidRowResult}>
+                        {centsToDisplay(w.runningTotalCents)}
+                      </Text>
+                    )}
                   </View>
-                  <Text style={[styles.weekTotal, { color: isPos ? C.positive : C.negative }]}>
-                    {centsToDisplay(w.runningTotalCents)}
-                  </Text>
                 </View>
+              );
+            })}
+          </View>
+        ))}
 
-                <View style={styles.weekStats}>
-                  <View style={styles.weekStat}>
-                    <Text style={styles.statNum}>{w.choresDone}</Text>
-                    <Text style={styles.statLbl}>done</Text>
-                  </View>
-                  <View style={styles.weekStat}>
-                    <Text style={[styles.statNum, w.choresMissed > 0 && { color: C.negative }]}>{w.choresMissed}</Text>
-                    <Text style={styles.statLbl}>missed</Text>
-                  </View>
-                  {isClosed && w.paidOutCents !== null && (
-                    <View style={styles.weekStat}>
-                      <Text style={[styles.statNum, { color: C.positive }]}>{centsToDisplay(w.paidOutCents)}</Text>
-                      <Text style={styles.statLbl}>paid out</Text>
-                    </View>
-                  )}
-                  {isClosed && w.rolledOverCents !== null && w.rolledOverCents < 0 && (
-                    <View style={styles.weekStat}>
-                      <Text style={[styles.statNum, { color: C.negative }]}>{centsToDisplay(w.rolledOverCents)}</Text>
-                      <Text style={styles.statLbl}>rolled</Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-            );
-          })}
-        </ScrollView>
-      )}
+        {groups.length > 0 && (
+          <Text style={styles.endLabel}>— earlier weeks —</Text>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -119,20 +141,22 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.background },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  kidScroll: { backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  kidPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginRight: 8, backgroundColor: C.surface },
-  kidPillTxt: { fontFamily: "SpaceGrotesk_500Medium", fontSize: 14, color: C.foreground },
   scroll: { padding: 16, paddingBottom: 110 },
-  weekCard: { backgroundColor: C.card, borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: C.border },
-  weekRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  weekDates: { fontFamily: "SpaceGrotesk_500Medium", fontSize: 14, color: C.foreground },
-  statusBadge: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 11, marginTop: 2 },
-  weekTotal: { fontFamily: "SpaceGrotesk_700Bold", fontSize: 20 },
-  weekStats: { flexDirection: "row", marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.border },
-  weekStat: { flex: 1, alignItems: "center" },
-  statNum: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 14, color: C.foreground },
-  statLbl: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 11, color: C.mutedForeground, marginTop: 2 },
+
+  weekGroup: { marginBottom: 20 },
+  weekHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: C.border, marginBottom: 2 },
+  weekDateRange: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 15, color: C.foreground },
+  weekClosedDow: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 12, color: C.mutedForeground },
+
+  kidRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: C.border + "80" },
+  kidDot: { width: 8, height: 8, borderRadius: 4, marginRight: 10 },
+  kidRowName: { fontFamily: "SpaceGrotesk_500Medium", fontSize: 15, color: C.foreground, width: 70 },
+  kidRowRight: { flex: 1, alignItems: "flex-end" },
+  kidRowResult: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 14, color: C.mutedForeground },
+
   emptyCard: { backgroundColor: C.card, borderRadius: 14, padding: 24, alignItems: "center", borderWidth: 1, borderColor: C.border },
   emptyTitle: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 17, color: C.foreground, marginBottom: 6 },
   emptyBody: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 13, color: C.mutedForeground, textAlign: "center" },
+
+  endLabel: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 12, color: C.mutedForeground, textAlign: "center", marginTop: 8 },
 });
