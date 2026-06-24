@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "qrF6e45RWXf7KAo42Wyjp"
+uri = "file://artifacts/mobile/assets/images/icon.png"
+type = "image"
+title = "family ledger coin icon"

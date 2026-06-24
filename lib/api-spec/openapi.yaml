@@ -1,22 +1,41 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Family Ledger API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: households
+    description: Household management
+  - name: members
+    description: Parent member management
+  - name: invitations
+    description: Household invitations
+  - name: kids
+    description: Kids management
+  - name: chores
+    description: Chore templates
+  - name: weeks
+    description: Weekly allowance tracking
+  - name: entries
+    description: Ledger entries
+  - name: goals
+    description: Savings goals
+  - name: wallets
+    description: Kid wallets
+  - name: dashboard
+    description: Dashboard summaries
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +43,1113 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Households ──────────────────────────────────────────────────────────────
+  /households/me:
+    get:
+      operationId: getMyHousehold
+      tags: [households]
+      summary: Get the caller's household
+      responses:
+        "200":
+          description: Household
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Household"
+        "404":
+          description: Not in a household yet
+
+  /households:
+    post:
+      operationId: createHousehold
+      tags: [households]
+      summary: Create a new household (onboarding)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HouseholdInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Household"
+
+  /households/{id}:
+    patch:
+      operationId: updateHousehold
+      tags: [households]
+      summary: Update household settings
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HouseholdUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Household"
+
+  # ── Members ──────────────────────────────────────────────────────────────────
+  /members/me:
+    get:
+      operationId: getMyMember
+      tags: [members]
+      summary: Get the caller's member profile
+      responses:
+        "200":
+          description: Member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "404":
+          description: Not a member yet
+
+  /members/{id}:
+    patch:
+      operationId: updateMember
+      tags: [members]
+      summary: Update member profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+
+  /households/{householdId}/members:
+    get:
+      operationId: listMembers
+      tags: [members]
+      summary: List all members in a household
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Members list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Member"
+
+  # ── Invitations ───────────────────────────────────────────────────────────────
+  /invitations:
+    post:
+      operationId: createInvitation
+      tags: [invitations]
+      summary: Invite a co-parent by email or create a shareable link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvitationInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invitation"
+
+  /invitations/{token}:
+    get:
+      operationId: getInvitation
+      tags: [invitations]
+      summary: Look up an invitation by token
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invitation details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invitation"
+        "404":
+          description: Not found
+
+  /invitations/accept:
+    post:
+      operationId: acceptInvitation
+      tags: [invitations]
+      summary: Accept an invitation and join a household
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvitationAccept"
+      responses:
+        "200":
+          description: Joined household
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+
+  # ── Kids ─────────────────────────────────────────────────────────────────────
+  /kids:
+    get:
+      operationId: listKids
+      tags: [kids]
+      summary: List all kids in the caller's household
+      responses:
+        "200":
+          description: Kids list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Kid"
+
+    post:
+      operationId: createKid
+      tags: [kids]
+      summary: Add a kid to the household
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KidInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Kid"
+
+  /kids/{id}:
+    get:
+      operationId: getKid
+      tags: [kids]
+      summary: Get a specific kid
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Kid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Kid"
+        "404":
+          description: Not found
+
+    patch:
+      operationId: updateKid
+      tags: [kids]
+      summary: Update a kid's details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KidUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Kid"
+
+    delete:
+      operationId: deleteKid
+      tags: [kids]
+      summary: Remove a kid from the household
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Chores ───────────────────────────────────────────────────────────────────
+  /chores:
+    get:
+      operationId: listChores
+      tags: [chores]
+      summary: List all chore templates in the household
+      responses:
+        "200":
+          description: Chores list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Chore"
+
+    post:
+      operationId: createChore
+      tags: [chores]
+      summary: Create a chore template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChoreInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Chore"
+
+  /chores/{id}:
+    patch:
+      operationId: updateChore
+      tags: [chores]
+      summary: Update a chore template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChoreUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Chore"
+
+    delete:
+      operationId: deleteChore
+      tags: [chores]
+      summary: Delete a chore template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Weeks ────────────────────────────────────────────────────────────────────
+  /weeks/current:
+    get:
+      operationId: getCurrentWeeks
+      tags: [weeks]
+      summary: Get the current open week for all kids in the household
+      responses:
+        "200":
+          description: List of current weeks with entries and running totals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WeekSummary"
+
+  /weeks/{id}:
+    get:
+      operationId: getWeek
+      tags: [weeks]
+      summary: Get a specific week with all entries
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Week with entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeekDetail"
+        "404":
+          description: Not found
+
+  /kids/{kidId}/weeks:
+    get:
+      operationId: getKidWeeks
+      tags: [weeks]
+      summary: Get week history for a kid
+      parameters:
+        - name: kidId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Week history newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WeekSummary"
+
+  /weeks/close:
+    post:
+      operationId: closeWeek
+      tags: [weeks]
+      summary: Close out the current week for all kids and compute payouts
+      responses:
+        "200":
+          description: Close-out results for each kid
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CloseOutResult"
+
+  /weeks/{weekId}/payout:
+    post:
+      operationId: confirmPayout
+      tags: [weeks]
+      summary: Confirm a payout for a kid's closed week — splits into wallet
+      parameters:
+        - name: weekId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Payout confirmed, wallet updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayoutResult"
+
+  # ── Entries ──────────────────────────────────────────────────────────────────
+  /entries:
+    post:
+      operationId: createEntry
+      tags: [entries]
+      summary: Log an entry (chore done/missed, bonus, penalty)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EntryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Entry"
+
+  /entries/{id}:
+    delete:
+      operationId: deleteEntry
+      tags: [entries]
+      summary: Delete an entry (undo)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Goals ────────────────────────────────────────────────────────────────────
+  /kids/{kidId}/goals:
+    get:
+      operationId: listGoals
+      tags: [goals]
+      summary: List savings goals for a kid
+      parameters:
+        - name: kidId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Goals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Goal"
+
+  /goals:
+    post:
+      operationId: createGoal
+      tags: [goals]
+      summary: Create a savings goal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoalInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Goal"
+
+  /goals/{id}:
+    patch:
+      operationId: updateGoal
+      tags: [goals]
+      summary: Update a goal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoalUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Goal"
+
+    delete:
+      operationId: deleteGoal
+      tags: [goals]
+      summary: Delete a goal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Wallets ──────────────────────────────────────────────────────────────────
+  /kids/{kidId}/wallet:
+    get:
+      operationId: getWallet
+      tags: [wallets]
+      summary: Get a kid's wallet balances
+      parameters:
+        - name: kidId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Wallet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+
+  /kids/{kidId}/payout-plan:
+    get:
+      operationId: getPayoutPlan
+      tags: [wallets]
+      summary: Get a kid's payout plan
+      parameters:
+        - name: kidId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Payout plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayoutPlan"
+
+    patch:
+      operationId: updatePayoutPlan
+      tags: [wallets]
+      summary: Update a kid's payout plan
+      parameters:
+        - name: kidId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayoutPlanUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayoutPlan"
+
+  # ── Dashboard ─────────────────────────────────────────────────────────────────
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Get household dashboard summary
+      responses:
+        "200":
+          description: Dashboard with all kids' current status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    # ── Household ─────────────────────────────────────────────────────────────
+    Household:
+      type: object
+      required: [id, name, baseDefaultCents, weekStartDow]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        baseDefaultCents:
+          type: integer
+        weekStartDow:
+          type: integer
+          description: "0=Sunday, 1=Monday, etc."
+
+    HouseholdInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        baseDefaultCents:
+          type: integer
+          default: 4000
+        weekStartDow:
+          type: integer
+          default: 0
+        memberName:
+          type: string
+
+    HouseholdUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        baseDefaultCents:
+          type: integer
+        weekStartDow:
+          type: integer
+
+    # ── Member ────────────────────────────────────────────────────────────────
+    Member:
+      type: object
+      required: [id, householdId, userId, name, email, avatarInitial, role]
+      properties:
+        id:
+          type: integer
+        householdId:
+          type: integer
+        userId:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        avatarInitial:
+          type: string
+        role:
+          type: string
+          enum: [owner, member]
+
+    MemberUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        avatarInitial:
+          type: string
+
+    # ── Invitation ────────────────────────────────────────────────────────────
+    Invitation:
+      type: object
+      required: [id, householdId, token, status]
+      properties:
+        id:
+          type: integer
+        householdId:
+          type: integer
+        token:
+          type: string
+        email:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, accepted, expired]
+        createdAt:
+          type: string
+
+    InvitationInput:
+      type: object
+      properties:
+        email:
+          type: ["string", "null"]
+
+    InvitationAccept:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+        memberName:
+          type: string
+
+    # ── Kid ───────────────────────────────────────────────────────────────────
+    Kid:
+      type: object
+      required: [id, householdId, name, color, baseAllowanceCents]
+      properties:
+        id:
+          type: integer
+        householdId:
+          type: integer
+        name:
+          type: string
+        color:
+          type: string
+        baseAllowanceCents:
+          type: integer
+
+    KidInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        color:
+          type: string
+        baseAllowanceCents:
+          type: integer
+
+    KidUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        color:
+          type: string
+        baseAllowanceCents:
+          type: integer
+
+    # ── Chore ─────────────────────────────────────────────────────────────────
+    Chore:
+      type: object
+      required: [id, householdId, name, valueCents, active, kidIds]
+      properties:
+        id:
+          type: integer
+        householdId:
+          type: integer
+        name:
+          type: string
+        valueCents:
+          type: integer
+        active:
+          type: boolean
+        kidIds:
+          type: array
+          items:
+            type: integer
+
+    ChoreInput:
+      type: object
+      required: [name, valueCents]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        valueCents:
+          type: integer
+        kidIds:
+          type: array
+          items:
+            type: integer
+
+    ChoreUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        valueCents:
+          type: integer
+        active:
+          type: boolean
+        kidIds:
+          type: array
+          items:
+            type: integer
+
+    # ── Week ──────────────────────────────────────────────────────────────────
+    WeekSummary:
+      type: object
+      required: [id, kidId, startDate, endDate, openingBalanceCents, runningTotalCents, status, choresDone, choresMissed, totalChores]
+      properties:
+        id:
+          type: integer
+        kidId:
+          type: integer
+        kidName:
+          type: string
+        kidColor:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+        openingBalanceCents:
+          type: integer
+        runningTotalCents:
+          type: integer
+        netChangeCents:
+          type: integer
+        status:
+          type: string
+          enum: [open, closed]
+        paidOutCents:
+          type: ["integer", "null"]
+        rolledOverCents:
+          type: ["integer", "null"]
+        choresDone:
+          type: integer
+        choresMissed:
+          type: integer
+        totalChores:
+          type: integer
+        closedAt:
+          type: ["string", "null"]
+
+    WeekDetail:
+      type: object
+      required: [id, kidId, startDate, endDate, openingBalanceCents, runningTotalCents, status, entries]
+      properties:
+        id:
+          type: integer
+        kidId:
+          type: integer
+        kidName:
+          type: string
+        kidColor:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+        openingBalanceCents:
+          type: integer
+        runningTotalCents:
+          type: integer
+        status:
+          type: string
+          enum: [open, closed]
+        paidOutCents:
+          type: ["integer", "null"]
+        rolledOverCents:
+          type: ["integer", "null"]
+        closedAt:
+          type: ["string", "null"]
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/Entry"
+
+    # ── Entry ─────────────────────────────────────────────────────────────────
+    Entry:
+      type: object
+      required: [id, weekId, kidId, type, amountCents, label, createdAt]
+      properties:
+        id:
+          type: integer
+        weekId:
+          type: integer
+        kidId:
+          type: integer
+        type:
+          type: string
+          enum: [chore_done, chore_missed, bonus, penalty]
+        amountCents:
+          type: integer
+          description: Signed — positive adds, negative subtracts
+        label:
+          type: string
+        note:
+          type: ["string", "null"]
+        createdByMemberId:
+          type: ["integer", "null"]
+        createdByName:
+          type: ["string", "null"]
+        createdByInitial:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    EntryInput:
+      type: object
+      required: [kidId, type, amountCents, label]
+      properties:
+        kidId:
+          type: integer
+        type:
+          type: string
+          enum: [chore_done, chore_missed, bonus, penalty]
+        amountCents:
+          type: integer
+        label:
+          type: string
+        note:
+          type: ["string", "null"]
+
+    # ── Close-out ─────────────────────────────────────────────────────────────
+    CloseOutResult:
+      type: object
+      required: [kidId, kidName, runningTotalCents, payoutCents, rolledOverCents, nextOpeningBalanceCents]
+      properties:
+        kidId:
+          type: integer
+        kidName:
+          type: string
+        weekId:
+          type: integer
+        runningTotalCents:
+          type: integer
+        payoutCents:
+          type: integer
+        rolledOverCents:
+          type: integer
+        nextOpeningBalanceCents:
+          type: integer
+
+    PayoutResult:
+      type: object
+      required: [kidId, payoutCents, toSaveCents, toSpendCents, goalReached]
+      properties:
+        kidId:
+          type: integer
+        payoutCents:
+          type: integer
+        toSaveCents:
+          type: integer
+        toSpendCents:
+          type: integer
+        goalReached:
+          type: boolean
+        goalName:
+          type: ["string", "null"]
+        wallet:
+          $ref: "#/components/schemas/Wallet"
+
+    # ── Goal ──────────────────────────────────────────────────────────────────
+    Goal:
+      type: object
+      required: [id, kidId, name, targetCents, savedCents]
+      properties:
+        id:
+          type: integer
+        kidId:
+          type: integer
+        name:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        targetCents:
+          type: integer
+        savedCents:
+          type: integer
+        completedAt:
+          type: ["string", "null"]
+
+    GoalInput:
+      type: object
+      required: [kidId, name, targetCents]
+      properties:
+        kidId:
+          type: integer
+        name:
+          type: string
+          minLength: 1
+        imageUrl:
+          type: ["string", "null"]
+        targetCents:
+          type: integer
+
+    GoalUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        targetCents:
+          type: integer
+
+    # ── Wallet ────────────────────────────────────────────────────────────────
+    Wallet:
+      type: object
+      required: [kidId, savedBalanceCents, spendBalanceCents]
+      properties:
+        kidId:
+          type: integer
+        savedBalanceCents:
+          type: integer
+        spendBalanceCents:
+          type: integer
+
+    # ── Payout Plan ───────────────────────────────────────────────────────────
+    PayoutPlan:
+      type: object
+      required: [kidId, mode, savePct]
+      properties:
+        kidId:
+          type: integer
+        mode:
+          type: string
+          enum: [split, save_all, spend_all]
+        savePct:
+          type: integer
+          description: "0-100, used when mode=split"
+
+    PayoutPlanUpdate:
+      type: object
+      required: [mode]
+      properties:
+        mode:
+          type: string
+          enum: [split, save_all, spend_all]
+        savePct:
+          type: integer
+
+    # ── Dashboard ─────────────────────────────────────────────────────────────
+    Dashboard:
+      type: object
+      required: [household, members, kidSummaries]
+      properties:
+        household:
+          $ref: "#/components/schemas/Household"
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/Member"
+        kidSummaries:
+          type: array
+          items:
+            $ref: "#/components/schemas/KidDashboardSummary"
+
+    KidDashboardSummary:
+      type: object
+      required: [kid, currentWeek, wallet]
+      properties:
+        kid:
+          $ref: "#/components/schemas/Kid"
+        currentWeek:
+          $ref: "#/components/schemas/WeekSummary"
+        wallet:
+          $ref: "#/components/schemas/Wallet"
+        activeGoal:
+          type: ["object", "null"]
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            targetCents:
+              type: integer
+            savedCents:
+              type: integer
