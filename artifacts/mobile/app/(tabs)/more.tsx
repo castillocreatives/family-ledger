@@ -48,6 +48,9 @@ export default function MoreScreen() {
   const [kidAllowance, setKidAllowance] = useState("");
   const [choreName, setChoreName] = useState("");
   const [choreValue, setChoreValue] = useState("");
+  const [choreKidIds, setChoreKidIds] = useState<number[]>([]);
+  const [choreActive, setChoreActive] = useState(true);
+  const [confirmDeleteChore, setConfirmDeleteChore] = useState(false);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [signOutConfirm, setSignOutConfirm] = useState(false);
@@ -80,17 +83,26 @@ export default function MoreScreen() {
     onSuccess: () => { refreshKids(); closeKidModal(); },
     onError: (e: any) => Alert.alert("Couldn't delete kid", e?.message ?? "Please try again."),
   });
+  const refreshChores = () => qc.invalidateQueries({ queryKey: ["chores"] });
+  const closeChoreModal = () => {
+    setChoreModal({ visible: false });
+    setConfirmDeleteChore(false);
+    setChoreName(""); setChoreValue(""); setChoreKidIds([]); setChoreActive(true);
+  };
   const createChore = useMutation({
     mutationFn: (body: object) => apiPost<Chore>("/chores", body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["chores"] }),
+    onSuccess: () => { refreshChores(); closeChoreModal(); },
+    onError: (e: Error) => Alert.alert("Couldn't save chore", e?.message ?? "Please try again."),
   });
-  const toggleChore = useMutation({
-    mutationFn: ({ id, active }: { id: number; active: boolean }) => apiPatch(`/chores/${id}`, { active }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["chores"] }),
+  const updateChore = useMutation({
+    mutationFn: ({ id, body }: { id: number; body: object }) => apiPatch<Chore>(`/chores/${id}`, body),
+    onSuccess: () => { refreshChores(); closeChoreModal(); },
+    onError: (e: Error) => Alert.alert("Couldn't save chore", e?.message ?? "Please try again."),
   });
   const deleteChore = useMutation({
     mutationFn: (id: number) => apiDelete(`/chores/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["chores"] }),
+    onSuccess: () => { refreshChores(); closeChoreModal(); },
+    onError: (e: Error) => Alert.alert("Couldn't delete chore", e?.message ?? "Please try again."),
   });
   const createInvite = useMutation({
     mutationFn: () => apiPost<{ token: string }>("/invitations"),
@@ -176,14 +188,36 @@ export default function MoreScreen() {
     }
   };
 
+  const openChoreModal = (chore?: Chore) => {
+    setConfirmDeleteChore(false);
+    if (chore) {
+      setChoreName(chore.name);
+      setChoreValue(chore.valueCents > 0 ? (chore.valueCents / 100).toFixed(2) : "");
+      setChoreKidIds(chore.kidIds ?? []);
+      setChoreActive(chore.active);
+    } else {
+      setChoreName(""); setChoreValue(""); setChoreKidIds([]); setChoreActive(true);
+    }
+    setChoreModal({ visible: true, chore });
+  };
+
+  const choreAppliesLabel = (c: Chore) => {
+    if (!c.kidIds?.length) return "All kids";
+    const names = c.kidIds.map(id => kids.find(k => k.id === id)?.name).filter(Boolean);
+    return names.length ? names.join(", ") : "All kids";
+  };
+
   const handleSaveChore = () => {
     if (!choreName.trim()) { Alert.alert("Name is required"); return; }
     const trimmed = choreValue.trim();
     const cents = trimmed === "" ? 0 : Math.round(parseFloat(trimmed) * 100);
     if (isNaN(cents) || cents < 0) { Alert.alert("Enter a valid value, or leave blank for a checklist chore"); return; }
-    createChore.mutate({ name: choreName.trim(), valueCents: cents });
-    setChoreName(""); setChoreValue("");
-    setChoreModal({ visible: false });
+    const body = { name: choreName.trim(), valueCents: cents, kidIds: choreKidIds };
+    if (choreModal.chore) {
+      updateChore.mutate({ id: choreModal.chore.id, body: { ...body, active: choreActive } });
+    } else {
+      createChore.mutate(body);
+    }
   };
 
   return (
@@ -207,25 +241,17 @@ export default function MoreScreen() {
         {/* Chores */}
         <Section title="Chores">
           {chores.map(c => (
-            <View key={c.id} style={styles.row}>
-              <Text style={[styles.rowLabel, !c.active && { color: C.mutedForeground }]}>{c.name}</Text>
-              <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-                <Text style={styles.rowValue}>{c.valueCents > 0 ? centsToDisplay(c.valueCents) : "Checklist"}</Text>
-                <TouchableOpacity onPress={() => toggleChore.mutate({ id: c.id, active: !c.active })}>
-                  <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: c.active ? C.positive : C.mutedForeground }}>
-                    {c.active ? "Active" : "Off"}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => Alert.alert("Delete?", c.name, [
-                  { text: "Cancel" },
-                  { text: "Delete", style: "destructive", onPress: () => deleteChore.mutate(c.id) },
-                ])}>
-                  <Text style={{ color: C.negative, fontSize: 16 }}>×</Text>
-                </TouchableOpacity>
+            <TouchableOpacity key={c.id} style={styles.row} onPress={() => openChoreModal(c)}>
+              <View style={{ flex: 1, paddingRight: 10 }}>
+                <Text style={[styles.rowLabel, !c.active && { color: C.mutedForeground }]}>
+                  {c.name}{!c.active ? " · off" : ""}
+                </Text>
+                <Text style={styles.choreAppliesTo}>{choreAppliesLabel(c)}</Text>
               </View>
-            </View>
+              <Text style={styles.rowValue}>{c.valueCents > 0 ? centsToDisplay(c.valueCents) : "Checklist"}</Text>
+            </TouchableOpacity>
           ))}
-          <TouchableOpacity style={styles.addBtn} onPress={() => setChoreModal({ visible: true })}>
+          <TouchableOpacity style={styles.addBtn} onPress={() => openChoreModal()}>
             <Text style={styles.addBtnTxt}>+ Add chore</Text>
           </TouchableOpacity>
         </Section>
@@ -290,22 +316,70 @@ export default function MoreScreen() {
         </View>
       </Modal>
 
-      {/* Add Chore Modal */}
+      {/* Add / Edit Chore Modal */}
       <Modal visible={choreModal.visible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Add a chore</Text>
-            <TextInput style={styles.input} placeholder="Chore name" placeholderTextColor={C.mutedForeground} value={choreName} onChangeText={setChoreName} />
-            <TextInput style={styles.input} placeholder="Reward per completion (e.g. 0.50)" placeholderTextColor={C.mutedForeground} value={choreValue} onChangeText={setChoreValue} keyboardType="decimal-pad" />
+            <Text style={styles.modalTitle}>{choreModal.chore ? "Edit chore" : "Add a chore"}</Text>
+            <TextInput style={styles.input} placeholder="Chore name" placeholderTextColor={C.mutedForeground} value={choreName} onChangeText={(t) => { setChoreName(t); setConfirmDeleteChore(false); }} />
+            <TextInput style={styles.input} placeholder="Reward per completion (e.g. 0.50)" placeholderTextColor={C.mutedForeground} value={choreValue} onChangeText={(t) => { setChoreValue(t); setConfirmDeleteChore(false); }} keyboardType="decimal-pad" />
             <Text style={styles.modalHint}>Leave the reward blank for a checklist chore — it's expected as part of the base allowance and doesn't pay extra.</Text>
+
+            <Text style={styles.choreFieldLabel}>Applies to</Text>
+            {kids.length === 0 ? (
+              <Text style={styles.modalHint}>Add kids first to assign chores to specific kids.</Text>
+            ) : (
+              <View style={styles.choreKidWrap}>
+                <TouchableOpacity
+                  style={[styles.choreKidPill, choreKidIds.length === 0 && styles.choreKidPillActive]}
+                  onPress={() => setChoreKidIds([])}
+                >
+                  <Text style={[styles.choreKidPillTxt, choreKidIds.length === 0 && styles.choreKidPillTxtActive]}>All kids</Text>
+                </TouchableOpacity>
+                {kids.map(k => {
+                  const on = choreKidIds.includes(k.id);
+                  return (
+                    <TouchableOpacity
+                      key={k.id}
+                      style={[styles.choreKidPill, on && { backgroundColor: k.color, borderColor: k.color }]}
+                      onPress={() => setChoreKidIds(prev => prev.includes(k.id) ? prev.filter(id => id !== k.id) : [...prev, k.id])}
+                    >
+                      <Text style={[styles.choreKidPillTxt, on && styles.choreKidPillTxtActive]}>{k.name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+
+            {choreModal.chore && (
+              <TouchableOpacity style={styles.activeToggleRow} onPress={() => setChoreActive(a => !a)}>
+                <Text style={styles.activeToggleLabel}>Active</Text>
+                <View style={[styles.activeToggle, choreActive && styles.activeToggleOn]}>
+                  <Text style={[styles.activeToggleTxt, choreActive && styles.activeToggleTxtOn]}>{choreActive ? "On" : "Off"}</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+
             <View style={styles.modalBtns}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setChoreModal({ visible: false })}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={closeChoreModal}>
                 <Text style={styles.cancelTxt}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.confirmBtn} onPress={handleSaveChore}>
-                <Text style={styles.confirmTxt}>Add chore</Text>
+                <Text style={styles.confirmTxt}>{choreModal.chore ? "Save" : "Add chore"}</Text>
               </TouchableOpacity>
             </View>
+
+            {choreModal.chore && (
+              <TouchableOpacity
+                style={styles.deleteBtn}
+                onPress={() => {
+                  if (confirmDeleteChore) deleteChore.mutate(choreModal.chore!.id);
+                  else setConfirmDeleteChore(true);
+                }}
+              >
+                <Text style={styles.deleteTxt}>{confirmDeleteChore ? "Tap again to delete" : "Delete chore"}</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </Modal>
@@ -367,6 +441,19 @@ const styles = StyleSheet.create({
   rowLabel: { fontFamily: "Inter_500Medium", fontSize: 16, color: C.foreground },
   rowValue: { fontFamily: "Inter_400Regular", fontSize: 14, color: C.mutedForeground },
   rowChevron: { fontFamily: "Inter_400Regular", fontSize: 20, color: C.mutedForeground },
+  choreAppliesTo: { fontFamily: "Inter_400Regular", fontSize: 12, color: C.mutedForeground, marginTop: 3 },
+  choreFieldLabel: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: C.mutedForeground, letterSpacing: 0.8, marginBottom: 10 },
+  choreKidWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
+  choreKidPill: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: C.border, backgroundColor: C.background },
+  choreKidPillActive: { backgroundColor: C.primary, borderColor: C.primary },
+  choreKidPillTxt: { fontFamily: "Inter_500Medium", fontSize: 14, color: C.foreground },
+  choreKidPillTxtActive: { color: C.primaryForeground },
+  activeToggleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 6, marginBottom: 8 },
+  activeToggleLabel: { fontFamily: "Inter_500Medium", fontSize: 15, color: C.foreground },
+  activeToggle: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: C.border, backgroundColor: C.background },
+  activeToggleOn: { backgroundColor: C.positive + "20", borderColor: C.positive },
+  activeToggleTxt: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: C.mutedForeground },
+  activeToggleTxtOn: { color: C.positive },
   addBtn: { paddingHorizontal: 16, paddingVertical: 13, backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
   addBtnTxt: { fontFamily: "Inter_500Medium", fontSize: 15, color: C.primary },
   modalOverlay: { flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" },
