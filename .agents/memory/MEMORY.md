@@ -1,1 +1,2 @@
 - [Week rollover semantics](week-rollover.md) — positive/negative balances carry via rolledOverCents; rollover action is positive-only or it erases carried debt.
+- [Auto-miss chore deductions](auto-miss-chores.md) — incomplete paid chores auto-deduct via read-triggered materializeAutoMisses; needs entryDate + choreId unique index for idempotency.

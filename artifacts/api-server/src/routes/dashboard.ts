@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, and } from "drizzle-orm";
 import { db, householdsTable, membersTable, kidsTable, walletsTable, goalsTable } from "@workspace/db";
 import { requireAuth, requireHousehold } from "../middlewares/auth";
-import { getOrCreateCurrentWeek, computeRunningTotal, computeChoreStats } from "../lib/weekEngine";
+import { getOrCreateCurrentWeek, computeRunningTotal, computeChoreStats, materializeAutoMisses } from "../lib/weekEngine";
 
 const router: IRouter = Router();
 
@@ -15,6 +15,7 @@ router.get("/dashboard", requireAuth, requireHousehold, async (req: Request, res
 
   const kidSummaries = await Promise.all(kids.map(async (kid) => {
     const week = await getOrCreateCurrentWeek(kid.id, kid.baseAllowanceCents, weekStartDow);
+    await materializeAutoMisses(week, kid);
     const runningTotalCents = await computeRunningTotal(week.id, week.openingBalanceCents);
     const { done, missed, total } = await computeChoreStats(week.id);
 

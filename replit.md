@@ -51,6 +51,7 @@ A mobile-first app for two parents to co-run a weekly kids' allowance system —
 - Week math: base allowance + chore completions − chore misses ± bonuses/penalties = running total
 - Close-out: positive total → payout to wallet; negative total → rolls into next week
 - Payout distribution: save bucket + spend bucket per kid's plan; auto-fills active savings goal
+- Auto-miss: assigned paid chores not logged on a completed day auto-create a `chore_missed` deduction (no parent action). Read-triggered + idempotent; checklist chores (value 0) are exempt
 
 ## User preferences
 

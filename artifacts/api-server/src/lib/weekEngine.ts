@@ -1,5 +1,107 @@
-import { db, weeksTable, entriesTable, kidsTable, walletsTable, payoutPlansTable, goalsTable } from "@workspace/db";
-import { eq, and, desc, sum } from "drizzle-orm";
+import { db, weeksTable, entriesTable, kidsTable, walletsTable, payoutPlansTable, goalsTable, choresTable, choreKidsTable } from "@workspace/db";
+import { eq, and, desc, sum, inArray } from "drizzle-orm";
+
+function isoDate(d: Date): string {
+  return d.toISOString().split("T")[0];
+}
+
+function addDays(dateStr: string, n: number): string {
+  const d = new Date(dateStr + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
+  return isoDate(d);
+}
+
+/**
+ * Auto-generate `chore_missed` entries for any paid chore a kid was assigned but
+ * did not log (done or missed) on a completed day of the open week. This is what
+ * makes incomplete days deduct from the weekly allowance without a parent acting.
+ *
+ * Idempotent: dedupes on (entryDate, chore name) against existing chore entries.
+ * - Only paid chores (valueCents > 0) — checklist chores have no money impact.
+ * - Only days that are already complete. By default "today" is still in progress;
+ *   pass includeToday when finalizing (close-out) so the current day counts too.
+ * - Never penalizes a day before the chore existed.
+ */
+export async function materializeAutoMisses(
+  week: typeof weeksTable.$inferSelect,
+  kid: typeof kidsTable.$inferSelect,
+  opts: { includeToday?: boolean } = {},
+): Promise<void> {
+  if (week.status !== "open") return;
+
+  const today = isoDate(new Date());
+  const days: string[] = [];
+  let day = week.startDate;
+  while (day <= week.endDate) {
+    const complete = opts.includeToday ? day <= today : day < today;
+    if (!complete) break;
+    days.push(day);
+    day = addDays(day, 1);
+  }
+  if (days.length === 0) return;
+
+  const chores = await db
+    .select()
+    .from(choresTable)
+    .where(and(eq(choresTable.householdId, kid.householdId), eq(choresTable.active, true)));
+  const paidChores = chores.filter(c => c.valueCents > 0);
+  if (paidChores.length === 0) return;
+
+  const choreIds = paidChores.map(c => c.id);
+  const mappings = await db.select().from(choreKidsTable).where(inArray(choreKidsTable.choreId, choreIds));
+  const assigned = new Map<number, Set<number>>();
+  for (const m of mappings) {
+    if (!assigned.has(m.choreId)) assigned.set(m.choreId, new Set());
+    assigned.get(m.choreId)!.add(m.kidId);
+  }
+  // A chore with no kid mapping applies to all kids in the household.
+  const applicable = paidChores.filter(c => {
+    const set = assigned.get(c.id);
+    return !set || set.size === 0 || set.has(kid.id);
+  });
+  if (applicable.length === 0) return;
+
+  const existing = await db
+    .select({
+      label: entriesTable.label,
+      entryDate: entriesTable.entryDate,
+      type: entriesTable.type,
+      choreId: entriesTable.choreId,
+    })
+    .from(entriesTable)
+    .where(and(eq(entriesTable.weekId, week.id), eq(entriesTable.kidId, kid.id)));
+  // Dedupe by chore identity (choreId) for chore-linked rows, and by name for
+  // manual chore entries the tracker logs without a choreId.
+  const seenChore = new Set<string>();
+  const seenLabel = new Set<string>();
+  for (const e of existing) {
+    if (e.choreId != null) seenChore.add(`${e.entryDate}|${e.choreId}`);
+    if (e.type === "chore_done" || e.type === "chore_missed") seenLabel.add(`${e.entryDate}|${e.label}`);
+  }
+
+  const toInsert: (typeof entriesTable.$inferInsert)[] = [];
+  for (const c of applicable) {
+    const choreStart = isoDate(c.createdAt);
+    for (const d of days) {
+      if (d < choreStart) continue;
+      if (seenChore.has(`${d}|${c.id}`) || seenLabel.has(`${d}|${c.name}`)) continue;
+      toInsert.push({
+        weekId: week.id,
+        kidId: kid.id,
+        type: "chore_missed",
+        amountCents: -Math.abs(c.valueCents),
+        label: c.name,
+        note: "Auto: chore not completed",
+        entryDate: d,
+        choreId: c.id,
+        createdByMemberId: null,
+      });
+    }
+  }
+  // onConflictDoNothing: the unique index on (weekId,kidId,entryDate,choreId)
+  // makes concurrent materialization safe — no double deductions.
+  if (toInsert.length > 0) await db.insert(entriesTable).values(toInsert).onConflictDoNothing();
+}
 
 export function computeWeekDates(baseDate: Date, weekStartDow: number): { startDate: string; endDate: string } {
   const d = new Date(baseDate);

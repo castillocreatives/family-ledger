@@ -8,6 +8,7 @@ import {
   computeChoreStats,
   processCloseOut,
   processConfirmPayout,
+  materializeAutoMisses,
 } from "../lib/weekEngine";
 
 const router: IRouter = Router();
@@ -21,6 +22,7 @@ router.get("/weeks/current", requireAuth, requireHousehold, async (req: Request,
 
   const results = await Promise.all(kids.map(async (kid) => {
     const week = await getOrCreateCurrentWeek(kid.id, kid.baseAllowanceCents, weekStartDow);
+    await materializeAutoMisses(week, kid);
     const runningTotalCents = await computeRunningTotal(week.id, week.openingBalanceCents);
     const { done, missed, total } = await computeChoreStats(week.id);
     return {
@@ -166,6 +168,7 @@ router.post("/weeks/close", requireAuth, requireHousehold, async (req: Request, 
       };
     }
 
+    await materializeAutoMisses(week, kid, { includeToday: true });
     const result = await processCloseOut(week.id, kid.id, req.memberId, kid.baseAllowanceCents);
     return {
       kidId: kid.id,

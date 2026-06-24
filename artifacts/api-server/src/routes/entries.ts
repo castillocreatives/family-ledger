@@ -51,6 +51,7 @@ router.post("/entries", requireAuth, requireHousehold, async (req: Request, res:
     amountCents: signedAmount,
     label,
     note: note || null,
+    entryDate: new Date().toISOString().split("T")[0],
     createdByMemberId: req.memberId || null,
   }).returning();
 
