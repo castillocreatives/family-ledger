@@ -10,27 +10,46 @@ const C = colors.light;
 type Status = "checking" | "tabs" | "onboarding" | "error";
 
 export default function IndexScreen() {
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isSignedIn, isLoaded, getToken } = useAuth();
   const [status, setStatus] = useState<Status>("checking");
 
   const checkHousehold = useCallback(async () => {
     setStatus("checking");
-    try {
-      const res = await apiFetch("/households/me");
-      if (res.ok) {
-        setStatus("tabs");
-      } else if (res.status === 404) {
-        // No household yet → send to onboarding
-        setStatus("onboarding");
-      } else {
-        // 401/500/etc — don't misroute an existing member; let them retry
+    // On first load the Clerk session can lag behind isSignedIn, so the token
+    // may not be ready for a tick. Retry transient 401s/network errors a few
+    // times before showing the error screen, so a no-household user still
+    // reaches onboarding instead of getting stuck.
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        const token = await getToken();
+        const res = await apiFetch("/households/me", {}, token);
+        if (res.ok) {
+          setStatus("tabs");
+          return;
+        }
+        if (res.status === 404) {
+          // No household yet → send to onboarding
+          setStatus("onboarding");
+          return;
+        }
+        if (res.status === 401 && attempt < 3) {
+          await new Promise((r) => setTimeout(r, 400));
+          continue;
+        }
+        // Other server errors — don't misroute; let them retry
         setStatus("error");
+        return;
+      } catch {
+        if (attempt < 3) {
+          await new Promise((r) => setTimeout(r, 400));
+          continue;
+        }
+        // Network failure — allow retry rather than forcing onboarding
+        setStatus("error");
+        return;
       }
-    } catch {
-      // Network failure — allow retry rather than forcing onboarding
-      setStatus("error");
     }
-  }, []);
+  }, [getToken]);
 
   useEffect(() => {
     if (isLoaded && isSignedIn) checkHousehold();

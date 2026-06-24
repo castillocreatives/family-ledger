@@ -18,3 +18,6 @@ The household invite flow is a code (token) pasted into Onboarding → "Join wit
 
 ## `Alert.alert` with buttons also breaks on web
 `Alert.alert(title, msg, [buttons])` on react-native-web shows the message but **does not fire button `onPress` callbacks**. Any confirm/destructive action wired through Alert buttons (sign out, delete kid/chore) silently does nothing in the preview. Use a state-driven `<Modal>` confirm instead (see the sign-out / invite modals in `more.tsx`). Single-button informational `Alert.alert(title, msg)` is fine.
+
+## Clerk token timing on web: singleton session lags behind `useAuth().isSignedIn`
+On Expo web's first load, `useAuth().isSignedIn` can be `true` while the Clerk **singleton** (`getClerkInstance().session`) is still null for a tick, so a module-level `getClerkInstance().session?.getToken()` returns null → the request 401s. For routing/auth-gating right after load, use the reactive `getToken` from the `useAuth()` hook (resolves once the session is ready) and pass it explicitly, and/or auto-retry transient 401s before showing an error/dead-end. Symptom seen: signed-in user with no household stuck on an "error/Retry" screen instead of routing to onboarding.

@@ -15,8 +15,8 @@ async function getToken(): Promise<string | null> {
   }
 }
 
-export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  const token = await getToken();
+export async function apiFetch(path: string, init: RequestInit = {}, tokenOverride?: string | null): Promise<Response> {
+  const token = tokenOverride !== undefined ? tokenOverride : await getToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(init.headers as Record<string, string> ?? {}),
