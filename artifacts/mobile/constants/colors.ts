@@ -1,39 +1,43 @@
 const palette = {
-  background: "#0d0b1a",
-  card: "#15132a",
-  surface: "#1c1938",
-  elevated: "#221f3e",
+  // Jet-black base (Aheadly / Neobank vibe)
+  background: "#0a0a0a",
+  card: "#141414",
+  surface: "#1e1e1e",
+  elevated: "#252525",
 
-  primary: "#8b6fff",
-  primaryForeground: "#ffffff",
+  // Lime green = positive / primary action (Aheadly hero)
+  primary: "#b5fd6e",
+  primaryForeground: "#0a0a0a",
 
-  secondary: "#fbbf24",
-  secondaryForeground: "#0d0b1a",
+  // Purple = secondary / neutral actions
+  accent: "#a78bfa",
+  accentForeground: "#0a0a0a",
 
-  foreground: "#ede9ff",
-  mutedForeground: "#7b76aa",
+  secondary: "#a78bfa",
+  secondaryForeground: "#0a0a0a",
 
-  border: "#231f42",
-  input: "#1c1938",
+  foreground: "#f0f0f0",
+  mutedForeground: "#6b6b6b",
 
-  positive: "#10d9a0",
-  negative: "#ff6b72",
+  border: "#262626",
+  input: "#1e1e1e",
 
-  muted: "#1c1938",
-  accent: "#fbbf24",
-  accentForeground: "#0d0b1a",
+  // Semantic
+  positive: "#b5fd6e",    // lime green
+  negative: "#ff5f5f",    // vivid coral-red
 
-  destructive: "#ff6b72",
-  destructiveForeground: "#ffffff",
+  muted: "#1e1e1e",
+  destructive: "#ff5f5f",
+  destructiveForeground: "#f0f0f0",
 
-  text: "#ede9ff",
-  tint: "#8b6fff",
+  text: "#f0f0f0",
+  tint: "#b5fd6e",
 };
 
 const colors = {
   light: palette,
   dark: palette,
-  radius: 16,
+  radius: 18,
 };
 
 export default colors;

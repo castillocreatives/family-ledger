@@ -37,13 +37,13 @@ export default function TabLayout() {
         headerShadowVisible: false,
         tabBarStyle: {
           position: "absolute",
-          backgroundColor: isIOS ? "transparent" : C.background,
+          backgroundColor: isIOS ? "transparent" : C.card,
           borderTopWidth: 1,
           borderTopColor: C.border,
           elevation: 0,
           height: Platform.OS === "web" ? 84 : undefined,
         },
-        tabBarLabelStyle: { fontFamily: "SpaceGrotesk_500Medium", fontSize: 11 },
+        tabBarLabelStyle: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 11 },
         tabBarBackground: () =>
           isIOS ? (
             <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFill} />

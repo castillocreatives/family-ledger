@@ -1,4 +1,4 @@
-import { useSignUp, useAuth } from "@clerk/expo";
+import { useSignUp } from "@clerk/expo";
 import { type Href, Link, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -20,20 +20,19 @@ export default function SignUpScreen() {
   const handleSignUp = async () => {
     const { error } = await signUp.password({ emailAddress: email, password });
     if (error) return;
-    if (!error) await signUp.verifications.sendEmailCode();
+    await signUp.verifications.sendEmailCode();
   };
 
   const handleVerify = async () => {
     await signUp.verifications.verifyEmailCode({ code });
     if (signUp.status === "complete") {
       await signUp.finalize({
-        navigate: ({ decorateUrl }) => {
-          router.replace("/onboarding" as Href);
-        },
+        navigate: () => router.replace("/onboarding" as Href),
       });
     }
   };
 
+  // Verification step
   if (
     signUp.status === "missing_requirements" &&
     signUp.unverifiedFields?.includes("email_address") &&
@@ -42,19 +41,19 @@ export default function SignUpScreen() {
     return (
       <SafeAreaView style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <View style={styles.logoArea}>
-            <View style={styles.logoGlow}>
-              <View style={styles.logoCircle}>
-                <Text style={styles.logoEmoji}>📬</Text>
+          <View style={styles.logoWrap}>
+            <View style={styles.logoOuter}>
+              <View style={styles.logoInner}>
+                <Text style={styles.logoMark}>📬</Text>
               </View>
             </View>
             <Text style={styles.wordmark}>Check your email</Text>
-            <Text style={styles.subtitle}>Enter the 6-digit code we sent you.</Text>
+            <Text style={styles.tagline}>Enter the 6-digit code we sent to {email}.</Text>
           </View>
 
           <View style={styles.card}>
             <TextInput
-              style={[styles.input, { fontSize: 28, letterSpacing: 10, textAlign: "center" }]}
+              style={[styles.input, { fontSize: 30, letterSpacing: 10, textAlign: "center", paddingVertical: 16 }]}
               placeholder="000000"
               placeholderTextColor={C.mutedForeground}
               value={code}
@@ -63,17 +62,9 @@ export default function SignUpScreen() {
               maxLength={6}
             />
             {errors.fields.code && <Text style={styles.errorTxt}>{errors.fields.code.message}</Text>}
-
-            <TouchableOpacity
-              style={[styles.btn, fetchStatus === "fetching" && styles.btnDisabled]}
-              onPress={handleVerify}
-              disabled={fetchStatus === "fetching"}
-            >
-              {fetchStatus === "fetching"
-                ? <ActivityIndicator color={C.primaryForeground} />
-                : <Text style={styles.btnText}>Verify & continue</Text>}
+            <TouchableOpacity style={[styles.btn, fetchStatus === "fetching" && styles.btnOff]} onPress={handleVerify} disabled={fetchStatus === "fetching"}>
+              {fetchStatus === "fetching" ? <ActivityIndicator color={C.primaryForeground} /> : <Text style={styles.btnTxt}>Verify & continue →</Text>}
             </TouchableOpacity>
-
             <TouchableOpacity style={styles.resendBtn} onPress={() => signUp.verifications.sendEmailCode()}>
               <Text style={styles.resendTxt}>Resend code</Text>
             </TouchableOpacity>
@@ -88,59 +79,39 @@ export default function SignUpScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
 
-          <View style={styles.logoArea}>
-            <View style={styles.logoGlow}>
-              <View style={styles.logoCircle}>
-                <Text style={styles.logoEmoji}>✨</Text>
+          <View style={styles.logoWrap}>
+            <View style={styles.logoOuter}>
+              <View style={styles.logoInner}>
+                <Text style={styles.logoMark}>✨</Text>
               </View>
             </View>
             <Text style={styles.wordmark}>Family Ledger</Text>
-            <Text style={styles.subtitle}>Set up your kids' allowance</Text>
+            <Text style={styles.tagline}>Track chores. Pay allowances. Together.</Text>
           </View>
 
           <View style={styles.card}>
             <Text style={styles.heading}>Create an account</Text>
 
             <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="you@example.com"
-              placeholderTextColor={C.mutedForeground}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-            />
+            <TextInput style={styles.input} placeholder="you@example.com" placeholderTextColor={C.mutedForeground} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
             {errors.fields.emailAddress && <Text style={styles.errorTxt}>{errors.fields.emailAddress.message}</Text>}
 
             <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
-              placeholderTextColor={C.mutedForeground}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoComplete="new-password"
-            />
+            <TextInput style={styles.input} placeholder="••••••••" placeholderTextColor={C.mutedForeground} value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" />
             {errors.fields.password && <Text style={styles.errorTxt}>{errors.fields.password.message}</Text>}
 
             <TouchableOpacity
-              style={[styles.btn, (!email || !password || fetchStatus === "fetching") && styles.btnDisabled]}
+              style={[styles.btn, (!email || !password || fetchStatus === "fetching") && styles.btnOff]}
               onPress={handleSignUp}
               disabled={!email || !password || fetchStatus === "fetching"}
             >
-              {fetchStatus === "fetching"
-                ? <ActivityIndicator color={C.primaryForeground} />
-                : <Text style={styles.btnText}>Continue →</Text>}
+              {fetchStatus === "fetching" ? <ActivityIndicator color={C.primaryForeground} /> : <Text style={styles.btnTxt}>Continue →</Text>}
             </TouchableOpacity>
 
-            <View style={styles.row}>
-              <Text style={styles.muted}>Already have an account? </Text>
-              <Link href="/sign-in"><Text style={styles.link}>Sign in</Text></Link>
+            <View style={styles.footerRow}>
+              <Text style={styles.footerMuted}>Already have an account? </Text>
+              <Link href="/sign-in"><Text style={styles.footerLink}>Sign in</Text></Link>
             </View>
-
             <View nativeID="clerk-captcha" />
           </View>
         </ScrollView>
@@ -153,51 +124,44 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.background },
   scroll: { flexGrow: 1, padding: 24, justifyContent: "center" },
 
-  logoArea: { alignItems: "center", marginBottom: 36 },
-  logoGlow: {
-    width: 100, height: 100, borderRadius: 50,
-    backgroundColor: C.primary + "25",
+  logoWrap: { alignItems: "center", marginBottom: 40 },
+  logoOuter: {
+    width: 108, height: 108, borderRadius: 54,
+    backgroundColor: C.primary + "1a",
     justifyContent: "center", alignItems: "center",
-    marginBottom: 18,
-    shadowColor: C.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 28,
-    elevation: 12,
+    marginBottom: 20,
+    shadowColor: C.primary, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.55, shadowRadius: 32, elevation: 14,
   },
-  logoCircle: {
-    width: 72, height: 72, borderRadius: 36,
-    backgroundColor: C.primary + "40",
+  logoInner: {
+    width: 76, height: 76, borderRadius: 38,
+    backgroundColor: C.primary + "30",
     justifyContent: "center", alignItems: "center",
-    borderWidth: 1.5, borderColor: C.primary + "80",
+    borderWidth: 1.5, borderColor: C.primary + "70",
   },
-  logoEmoji: { fontSize: 34 },
+  logoMark: { fontSize: 36 },
   wordmark: { fontFamily: "SpaceGrotesk_700Bold", fontSize: 30, color: C.foreground, letterSpacing: -0.5 },
-  subtitle: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 14, color: C.mutedForeground, marginTop: 4 },
+  tagline: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 14, color: C.mutedForeground, marginTop: 5, textAlign: "center", paddingHorizontal: 20 },
 
-  card: { backgroundColor: C.card, borderRadius: 20, padding: 24, borderWidth: 1, borderColor: C.border },
-  heading: { fontFamily: "SpaceGrotesk_700Bold", fontSize: 22, color: C.foreground, marginBottom: 20 },
-  label: { fontFamily: "SpaceGrotesk_500Medium", fontSize: 13, color: C.mutedForeground, marginBottom: 6 },
+  card: { backgroundColor: C.card, borderRadius: 22, padding: 24, borderWidth: 1, borderColor: C.border },
+  heading: { fontFamily: "SpaceGrotesk_700Bold", fontSize: 22, color: C.foreground, marginBottom: 22 },
+  label: { fontFamily: "SpaceGrotesk_500Medium", fontSize: 13, color: C.mutedForeground, marginBottom: 7 },
   input: {
-    backgroundColor: C.input, color: C.foreground, fontFamily: "SpaceGrotesk_400Regular",
-    borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 14,
-    paddingVertical: 13, fontSize: 15, marginBottom: 8,
+    backgroundColor: C.input, color: C.foreground,
+    fontFamily: "SpaceGrotesk_400Regular",
+    borderWidth: 1, borderColor: C.border, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, marginBottom: 8,
   },
-  errorTxt: { fontFamily: "SpaceGrotesk_400Regular", color: C.negative, fontSize: 12, marginBottom: 10 },
+  errorTxt: { fontFamily: "SpaceGrotesk_400Regular", color: C.negative, fontSize: 12, marginBottom: 8 },
   btn: {
-    backgroundColor: C.primary, borderRadius: 12, paddingVertical: 15,
-    alignItems: "center", marginTop: 8,
-    shadowColor: C.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 6,
+    backgroundColor: C.primary, borderRadius: 13, paddingVertical: 15,
+    alignItems: "center", marginTop: 10,
+    shadowColor: C.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.45, shadowRadius: 16, elevation: 8,
   },
-  btnDisabled: { opacity: 0.45, shadowOpacity: 0 },
-  btnText: { fontFamily: "SpaceGrotesk_600SemiBold", color: C.primaryForeground, fontSize: 16 },
+  btnOff: { opacity: 0.4, shadowOpacity: 0 },
+  btnTxt: { fontFamily: "SpaceGrotesk_700Bold", color: C.primaryForeground, fontSize: 16 },
   resendBtn: { alignItems: "center", marginTop: 16 },
   resendTxt: { fontFamily: "SpaceGrotesk_500Medium", color: C.primary, fontSize: 14 },
-  row: { flexDirection: "row", justifyContent: "center", marginTop: 18 },
-  muted: { fontFamily: "SpaceGrotesk_400Regular", color: C.mutedForeground, fontSize: 14 },
-  link: { fontFamily: "SpaceGrotesk_600SemiBold", color: C.primary, fontSize: 14 },
+  footerRow: { flexDirection: "row", justifyContent: "center", marginTop: 20 },
+  footerMuted: { fontFamily: "SpaceGrotesk_400Regular", color: C.mutedForeground, fontSize: 14 },
+  footerLink: { fontFamily: "SpaceGrotesk_600SemiBold", color: C.primary, fontSize: 14 },
 });

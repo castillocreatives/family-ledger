@@ -1,4 +1,3 @@
-import { useAuth } from "@clerk/expo";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
 import {
@@ -28,94 +27,114 @@ type Dashboard = {
   kidSummaries: KidSummary[];
 };
 
-type QuickModal = { visible: boolean; kidId: number | null; type: "bonus" | "penalty" };
-
-function fmt(date: string) {
-  const [, m, d] = date.split("-");
-  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  return `${months[parseInt(m) - 1]} ${parseInt(d)}`;
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function fmtDate(d: string) {
+  const [, m, day] = d.split("-");
+  return `${MONTHS[parseInt(m)-1]} ${parseInt(day)}`;
+}
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
 }
 
-function KidCard({
-  s, onBonus, onPenalty,
-}: {
+function KidCard({ s, onBonus, onPenalty }: {
   s: KidSummary;
   onBonus: () => void;
   onPenalty: () => void;
 }) {
   const router = useRouter();
-  const isPositive = s.currentWeek.runningTotalCents >= 0;
+  const total = s.currentWeek.runningTotalCents;
+  const isPos = total >= 0;
   const isClosed = s.currentWeek.status === "closed";
   const goalPct = s.activeGoal
     ? Math.min(1, s.activeGoal.savedCents / s.activeGoal.targetCents)
     : 0;
-  const chorePlusCents = s.currentWeek.netChangeCents > 0 ? s.currentWeek.netChangeCents : 0;
-  const choreMinusCents = s.currentWeek.netChangeCents < 0 ? s.currentWeek.netChangeCents : 0;
+
+  // Card background tint based on sign
+  const cardTint = isPos ? C.positive + "0c" : C.negative + "0c";
 
   return (
-    <View style={[styles.kidCard, { borderLeftColor: s.kid.color, borderLeftWidth: 3 }]}>
-      {/* Header row */}
-      <View style={styles.cardHeader}>
-        <View style={[styles.avatar, { backgroundColor: s.kid.color + "25" }]}>
-          <Text style={[styles.avatarTxt, { color: s.kid.color }]}>
-            {s.kid.name[0].toUpperCase()}
-          </Text>
-        </View>
-        <View style={{ flex: 1, marginLeft: 10 }}>
-          <Text style={styles.kidName}>{s.kid.name}</Text>
-          <Text style={styles.kidBase}>base {centsToDisplay(s.currentWeek.openingBalanceCents)}</Text>
+    <View style={[styles.kidCard, { backgroundColor: C.card, borderColor: isPos ? C.positive + "30" : C.negative + "30" }]}>
+      {/* Kid header */}
+      <View style={styles.kidCardHeader}>
+        <View style={styles.kidIdentity}>
+          <View style={[styles.avatar, { backgroundColor: s.kid.color + "28", borderColor: s.kid.color + "80", borderWidth: 1.5 }]}>
+            <Text style={[styles.avatarTxt, { color: s.kid.color }]}>{s.kid.name[0].toUpperCase()}</Text>
+          </View>
+          <View style={{ marginLeft: 12 }}>
+            <Text style={styles.kidName}>{s.kid.name}</Text>
+            <Text style={styles.kidWeek}>{fmtDate(s.currentWeek.startDate)} – {fmtDate(s.currentWeek.endDate)}</Text>
+          </View>
         </View>
         <TouchableOpacity
+          style={styles.todayPill}
           onPress={() => router.push({ pathname: "/(tabs)/tracker", params: { kidId: String(s.kid.id) } })}
-          style={styles.todayBtn}
         >
-          <Text style={styles.todayBtnTxt}>Today ›</Text>
+          <Text style={styles.todayPillTxt}>Today ›</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Big running total */}
-      <Text style={[styles.bigTotal, { color: isPositive ? C.positive : C.negative }]}>
-        {centsToDisplay(s.currentWeek.runningTotalCents)}
-      </Text>
-      <Text style={styles.totalSub}>
-        {isPositive
-          ? `+${centsToDisplay(s.currentWeek.netChangeCents)} this week`
-          : isClosed ? "week closed" : "rolls over if < 0"}
+      {/* Big balance */}
+      <View style={styles.balanceRow}>
+        <Text style={[styles.balanceNum, { color: isPos ? C.positive : C.negative }]}>
+          {centsToDisplay(total)}
+        </Text>
+        {isClosed && (
+          <View style={[styles.closedBadge]}>
+            <Text style={styles.closedBadgeTxt}>CLOSED</Text>
+          </View>
+        )}
+      </View>
+      <Text style={styles.balanceSub}>
+        base {centsToDisplay(s.currentWeek.openingBalanceCents)}
+        {isPos && s.currentWeek.netChangeCents > 0
+          ? ` · +${centsToDisplay(s.currentWeek.netChangeCents)} this week`
+          : !isPos ? " · rolls over" : ""}
       </Text>
 
-      {/* Chore progress */}
-      <Text style={styles.choreStats}>
-        chores {s.currentWeek.choresDone}/{s.currentWeek.totalChores}
-        {chorePlusCents > 0 ? ` · +${centsToDisplay(chorePlusCents)}` : ""}
-        {choreMinusCents < 0 ? ` / ${centsToDisplay(choreMinusCents)}` : ""}
-      </Text>
+      {/* Chore progress bar */}
+      <View style={styles.choreProgressRow}>
+        <View style={styles.choreBar}>
+          <View style={[
+            styles.choreBarFill,
+            { width: s.currentWeek.totalChores > 0
+                ? `${(s.currentWeek.choresDone / s.currentWeek.totalChores) * 100}%` as any
+                : "0%",
+              backgroundColor: isPos ? C.positive : C.mutedForeground },
+          ]} />
+        </View>
+        <Text style={styles.choreLabel}>
+          {s.currentWeek.choresDone}/{s.currentWeek.totalChores} chores
+          {s.currentWeek.choresMissed > 0 ? ` · ${s.currentWeek.choresMissed} missed` : ""}
+        </Text>
+      </View>
 
-      {/* Goal bar */}
+      {/* Goal */}
       {s.activeGoal && (
         <TouchableOpacity
-          style={styles.goalBlock}
+          style={styles.goalRow}
           onPress={() => router.push({ pathname: "/kid/[kidId]/money", params: { kidId: String(s.kid.id) } } as any)}
         >
-          <View style={styles.goalLabelRow}>
-            <Text style={styles.goalName}>{s.activeGoal.name}</Text>
-            <Text style={styles.goalAmt}>
-              {centsToDisplay(s.activeGoal.savedCents)} / {centsToDisplay(s.activeGoal.targetCents)}
-            </Text>
-          </View>
-          <View style={styles.progressBg}>
-            <View style={[styles.progressFill, { width: `${goalPct * 100}%` as any, backgroundColor: s.kid.color }]} />
+          <View style={styles.goalDot} />
+          <Text style={styles.goalText}>
+            {s.activeGoal.name} · {centsToDisplay(s.activeGoal.savedCents)}/{centsToDisplay(s.activeGoal.targetCents)}
+          </Text>
+          <View style={styles.goalMiniBar}>
+            <View style={[styles.goalMiniFill, { width: `${goalPct * 100}%` as any, backgroundColor: s.kid.color }]} />
           </View>
         </TouchableOpacity>
       )}
 
-      {/* Quick actions */}
+      {/* Actions */}
       {!isClosed && (
-        <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.bonusBtn} onPress={onBonus}>
-            <Text style={styles.bonusBtnTxt}>+ Bonus</Text>
+        <View style={styles.actionRow}>
+          <TouchableOpacity style={styles.actionPill} onPress={onBonus}>
+            <Text style={styles.actionPillTxt}>＋ Bonus</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.penaltyBtn} onPress={onPenalty}>
-            <Text style={styles.penaltyBtnTxt}>– Points</Text>
+          <TouchableOpacity style={[styles.actionPill, styles.actionPillRed]} onPress={onPenalty}>
+            <Text style={[styles.actionPillTxt, { color: C.negative }]}>－ Points</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -127,7 +146,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
-  const [modal, setModal] = useState<QuickModal>({ visible: false, kidId: null, type: "bonus" });
+  const [modal, setModal] = useState<{ visible: boolean; kidId: number | null; type: "bonus" | "penalty" }>({ visible: false, kidId: null, type: "bonus" });
   const [amount, setAmount] = useState("");
   const [label, setLabel] = useState("");
   const [note, setNote] = useState("");
@@ -142,58 +161,47 @@ export default function HomeScreen() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       qc.invalidateQueries({ queryKey: ["weeks"] });
-      closeModal();
+      setModal({ visible: false, kidId: null, type: "bonus" });
     },
     onError: (e: any) => Alert.alert("Error", e.message),
   });
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
-  };
+  const onRefresh = async () => { setRefreshing(true); await refetch(); setRefreshing(false); };
 
   const openModal = (kidId: number, type: "bonus" | "penalty") => {
     setAmount(""); setLabel(""); setNote("");
     setModal({ visible: true, kidId, type });
   };
 
-  const closeModal = () => setModal({ visible: false, kidId: null, type: "bonus" });
-
-  const handleSubmit = () => {
+  const submit = () => {
     const cents = Math.round(parseFloat(amount) * 100);
     if (!cents || isNaN(cents)) { Alert.alert("Enter a valid amount"); return; }
-    if (modal.type === "penalty" && !note.trim()) { Alert.alert("A reason is required"); return; }
-    addEntry.mutate({
-      kidId: modal.kidId,
-      type: modal.type,
-      amountCents: cents,
-      label: label.trim() || (modal.type === "bonus" ? "Bonus" : "Penalty"),
-      note: note.trim() || undefined,
-    });
+    if (modal.type === "penalty" && !note.trim()) { Alert.alert("A reason is required for deducting points"); return; }
+    addEntry.mutate({ kidId: modal.kidId, type: modal.type, amountCents: cents, label: label.trim() || (modal.type === "bonus" ? "Bonus" : "Penalty"), note: note.trim() || undefined });
   };
 
-  const kidSummaries = data?.kidSummaries ?? [];
-  const hasOpenWeeks = kidSummaries.some(s => s.currentWeek.status !== "closed");
-
-  const weekRange = kidSummaries[0]
-    ? `${fmt(kidSummaries[0].currentWeek.startDate)} – ${fmt(kidSummaries[0].currentWeek.endDate)}`
-    : "";
+  const summaries = data?.kidSummaries ?? [];
+  const hasOpenWeek = summaries.some(s => s.currentWeek.status !== "closed");
+  const weekLabel = summaries[0] ? `${fmtDate(summaries[0].currentWeek.startDate)} – ${fmtDate(summaries[0].currentWeek.endDate)}` : "";
 
   if (isLoading && !data) {
     return <View style={styles.center}><ActivityIndicator color={C.primary} size="large" /></View>;
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["bottom"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primary} />}
+        showsVerticalScrollIndicator={false}
       >
-        {/* Week header */}
-        <View style={styles.weekHeader}>
-          <Text style={styles.weekTitle}>THIS WEEK</Text>
-          {weekRange ? <Text style={styles.weekRange}>{weekRange}</Text> : null}
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>{greeting()}</Text>
+            {data?.household && <Text style={styles.householdName}>{data.household.name}</Text>}
+          </View>
+          {weekLabel ? <Text style={styles.weekBadge}>{weekLabel}</Text> : null}
         </View>
 
         {error && (
@@ -203,14 +211,18 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {kidSummaries.length === 0 && !error && (
+        {summaries.length === 0 && !error && !isLoading && (
           <View style={styles.emptyCard}>
+            <Text style={styles.emptyEmoji}>👶</Text>
             <Text style={styles.emptyTitle}>No kids yet</Text>
-            <Text style={styles.emptyBody}>Go to More → Kids to add your first child.</Text>
+            <Text style={styles.emptyBody}>Go to More to add your first child and set up allowances.</Text>
+            <TouchableOpacity style={styles.emptyBtn} onPress={() => router.push("/(tabs)/more")}>
+              <Text style={styles.emptyBtnTxt}>Set up →</Text>
+            </TouchableOpacity>
           </View>
         )}
 
-        {kidSummaries.map(s => (
+        {summaries.map(s => (
           <KidCard
             key={s.kid.id}
             s={s}
@@ -219,55 +231,33 @@ export default function HomeScreen() {
           />
         ))}
 
-        {hasOpenWeeks && (
-          <TouchableOpacity
-            style={styles.closeWeekBtn}
-            onPress={() => router.push("/(tabs)/close")}
-          >
-            <Text style={styles.closeWeekBtnTxt}>Close out week →</Text>
+        {hasOpenWeek && (
+          <TouchableOpacity style={styles.closeWeekRow} onPress={() => router.push("/(tabs)/close")}>
+            <Text style={styles.closeWeekTxt}>Close out this week</Text>
+            <Text style={styles.closeWeekArrow}>→</Text>
           </TouchableOpacity>
         )}
       </ScrollView>
 
-      {/* Quick entry modal */}
       <Modal visible={modal.visible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>
-              {modal.type === "bonus" ? "+ Add bonus" : "– Remove points"}
+              {modal.type === "bonus" ? "＋ Add bonus" : "－ Remove points"}
             </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Amount ($)"
-              placeholderTextColor={C.mutedForeground}
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="decimal-pad"
-            />
-            <TextInput
-              style={styles.input}
-              placeholder={modal.type === "bonus" ? "Label (optional)" : "Label (optional)"}
-              placeholderTextColor={C.mutedForeground}
-              value={label}
-              onChangeText={setLabel}
-            />
+            <TextInput style={styles.input} placeholder="Amount ($)" placeholderTextColor={C.mutedForeground} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
+            <TextInput style={styles.input} placeholder="Label (optional)" placeholderTextColor={C.mutedForeground} value={label} onChangeText={setLabel} />
             {modal.type === "penalty" && (
-              <TextInput
-                style={[styles.input, { minHeight: 60 }]}
-                placeholder="Reason (required)"
-                placeholderTextColor={C.mutedForeground}
-                value={note}
-                onChangeText={setNote}
-                multiline
-              />
+              <TextInput style={[styles.input, { minHeight: 60 }]} placeholder="Reason (required)" placeholderTextColor={C.mutedForeground} value={note} onChangeText={setNote} multiline />
             )}
             <View style={styles.modalBtns}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={closeModal}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setModal({ visible: false, kidId: null, type: "bonus" })}>
                 <Text style={styles.cancelTxt}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.confirmBtn, modal.type === "penalty" && { backgroundColor: C.negative }]}
-                onPress={handleSubmit}
+                onPress={submit}
                 disabled={addEntry.isPending}
               >
                 {addEntry.isPending
@@ -286,55 +276,68 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.background },
   center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: C.background },
-  scroll: { padding: 16, paddingBottom: 120 },
+  scroll: { paddingHorizontal: 16, paddingBottom: 110, paddingTop: 4 },
 
-  weekHeader: { marginBottom: 18, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: C.border },
-  weekTitle: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 11, color: C.mutedForeground, letterSpacing: 1.4 },
-  weekRange: { fontFamily: "SpaceGrotesk_700Bold", fontSize: 22, color: C.foreground, marginTop: 2 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, marginTop: 8 },
+  greeting: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 14, color: C.mutedForeground },
+  householdName: { fontFamily: "SpaceGrotesk_700Bold", fontSize: 24, color: C.foreground, marginTop: 2, letterSpacing: -0.5 },
+  weekBadge: { fontFamily: "SpaceGrotesk_500Medium", fontSize: 12, color: C.mutedForeground, backgroundColor: C.surface, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, marginTop: 6 },
 
-  kidCard: { backgroundColor: C.card, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: C.border },
-  cardHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
-  avatar: { width: 40, height: 40, borderRadius: 20, justifyContent: "center", alignItems: "center" },
-  avatarTxt: { fontFamily: "SpaceGrotesk_700Bold", fontSize: 18 },
+  kidCard: { borderRadius: 20, padding: 18, marginBottom: 14, borderWidth: 1 },
+  kidCardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  kidIdentity: { flexDirection: "row", alignItems: "center" },
+  avatar: { width: 44, height: 44, borderRadius: 22, justifyContent: "center", alignItems: "center" },
+  avatarTxt: { fontFamily: "SpaceGrotesk_700Bold", fontSize: 20 },
   kidName: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 16, color: C.foreground },
-  kidBase: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 12, color: C.mutedForeground, marginTop: 1 },
-  todayBtn: { backgroundColor: C.surface, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  todayBtnTxt: { fontFamily: "SpaceGrotesk_500Medium", fontSize: 13, color: C.primary },
+  kidWeek: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 11, color: C.mutedForeground, marginTop: 2 },
+  todayPill: { backgroundColor: C.surface, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 },
+  todayPillTxt: { fontFamily: "SpaceGrotesk_500Medium", fontSize: 13, color: C.foreground },
 
-  bigTotal: { fontFamily: "SpaceGrotesk_700Bold", fontSize: 40, lineHeight: 46, letterSpacing: -1 },
-  totalSub: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 13, color: C.mutedForeground, marginTop: 2 },
-  choreStats: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 12, color: C.mutedForeground, marginTop: 6 },
+  balanceRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 },
+  balanceNum: { fontFamily: "SpaceGrotesk_700Bold", fontSize: 46, letterSpacing: -1.5, lineHeight: 52 },
+  closedBadge: { backgroundColor: C.surface, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, alignSelf: "flex-end", marginBottom: 8 },
+  closedBadgeTxt: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 10, color: C.mutedForeground, letterSpacing: 0.8 },
+  balanceSub: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 13, color: C.mutedForeground, marginBottom: 14 },
 
-  goalBlock: { marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.border },
-  goalLabelRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },
-  goalName: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 12, color: C.mutedForeground },
-  goalAmt: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 12, color: C.mutedForeground },
-  progressBg: { height: 5, backgroundColor: C.border, borderRadius: 3, overflow: "hidden" },
-  progressFill: { height: 5, borderRadius: 3 },
+  choreProgressRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
+  choreBar: { flex: 1, height: 4, backgroundColor: C.border, borderRadius: 2, overflow: "hidden" },
+  choreBarFill: { height: 4, borderRadius: 2 },
+  choreLabel: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 12, color: C.mutedForeground },
 
-  quickActions: { flexDirection: "row", gap: 8, marginTop: 14 },
-  bonusBtn: { flex: 1, backgroundColor: C.positive + "18", paddingVertical: 9, borderRadius: 10, alignItems: "center", borderWidth: 1, borderColor: C.positive + "40" },
-  bonusBtnTxt: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 13, color: C.positive },
-  penaltyBtn: { flex: 1, backgroundColor: C.negative + "18", paddingVertical: 9, borderRadius: 10, alignItems: "center", borderWidth: 1, borderColor: C.negative + "40" },
-  penaltyBtnTxt: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 13, color: C.negative },
+  goalRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.border },
+  goalDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.accent },
+  goalText: { flex: 1, fontFamily: "SpaceGrotesk_400Regular", fontSize: 12, color: C.mutedForeground },
+  goalMiniBar: { width: 50, height: 4, backgroundColor: C.border, borderRadius: 2, overflow: "hidden" },
+  goalMiniFill: { height: 4, borderRadius: 2 },
 
-  closeWeekBtn: { backgroundColor: C.primary, borderRadius: 14, paddingVertical: 16, alignItems: "center", marginTop: 4 },
-  closeWeekBtnTxt: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 16, color: C.primaryForeground },
+  actionRow: { flexDirection: "row", gap: 8 },
+  actionPill: { flex: 1, backgroundColor: C.positive + "18", paddingVertical: 10, borderRadius: 12, alignItems: "center", borderWidth: 1, borderColor: C.positive + "40" },
+  actionPillRed: { backgroundColor: C.negative + "14", borderColor: C.negative + "40" },
+  actionPillTxt: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 13, color: C.positive },
 
-  emptyCard: { backgroundColor: C.card, borderRadius: 14, padding: 24, alignItems: "center", borderWidth: 1, borderColor: C.border },
-  emptyTitle: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 17, color: C.foreground, marginBottom: 6 },
-  emptyBody: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 13, color: C.mutedForeground, textAlign: "center" },
+  closeWeekRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: C.primary, borderRadius: 16, paddingHorizontal: 20, paddingVertical: 16, marginTop: 4 },
+  closeWeekTxt: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 15, color: C.primaryForeground },
+  closeWeekArrow: { fontFamily: "SpaceGrotesk_700Bold", fontSize: 18, color: C.primaryForeground },
+
+  emptyCard: { backgroundColor: C.card, borderRadius: 20, padding: 32, alignItems: "center", borderWidth: 1, borderColor: C.border, marginTop: 40 },
+  emptyEmoji: { fontSize: 48, marginBottom: 12 },
+  emptyTitle: { fontFamily: "SpaceGrotesk_700Bold", fontSize: 20, color: C.foreground, marginBottom: 6 },
+  emptyBody: { fontFamily: "SpaceGrotesk_400Regular", fontSize: 14, color: C.mutedForeground, textAlign: "center", lineHeight: 20 },
+  emptyBtn: { marginTop: 20, backgroundColor: C.primary, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 12 },
+  emptyBtnTxt: { fontFamily: "SpaceGrotesk_600SemiBold", fontSize: 15, color: C.primaryForeground },
+
   errorCard: { backgroundColor: C.card, borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: C.negative },
   errorTxt: { fontFamily: "SpaceGrotesk_400Regular", color: C.negative, marginBottom: 8 },
   link: { fontFamily: "SpaceGrotesk_600SemiBold", color: C.primary, fontSize: 14 },
 
-  modalOverlay: { flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" },
-  modalCard: { backgroundColor: C.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 44 },
-  modalTitle: { fontFamily: "SpaceGrotesk_700Bold", fontSize: 18, color: C.foreground, marginBottom: 16 },
-  input: { backgroundColor: C.background, color: C.foreground, fontFamily: "SpaceGrotesk_400Regular", borderWidth: 1, borderColor: C.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, marginBottom: 12 },
+  modalOverlay: { flex: 1, backgroundColor: "#000000bb", justifyContent: "flex-end" },
+  modalSheet: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 48 },
+  modalHandle: { width: 36, height: 4, backgroundColor: C.border, borderRadius: 2, alignSelf: "center", marginBottom: 20 },
+  modalTitle: { fontFamily: "SpaceGrotesk_700Bold", fontSize: 20, color: C.foreground, marginBottom: 18 },
+  input: { backgroundColor: C.input, color: C.foreground, fontFamily: "SpaceGrotesk_400Regular", borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, marginBottom: 12 },
   modalBtns: { flexDirection: "row", gap: 10, marginTop: 4 },
-  cancelBtn: { flex: 1, backgroundColor: C.surface, borderRadius: 10, paddingVertical: 13, alignItems: "center" },
+  cancelBtn: { flex: 1, backgroundColor: C.surface, borderRadius: 12, paddingVertical: 14, alignItems: "center" },
   cancelTxt: { fontFamily: "SpaceGrotesk_600SemiBold", color: C.mutedForeground, fontSize: 15 },
-  confirmBtn: { flex: 1, backgroundColor: C.primary, borderRadius: 10, paddingVertical: 13, alignItems: "center" },
+  confirmBtn: { flex: 1, backgroundColor: C.primary, borderRadius: 12, paddingVertical: 14, alignItems: "center" },
   confirmTxt: { fontFamily: "SpaceGrotesk_600SemiBold", color: C.primaryForeground, fontSize: 15 },
 });
