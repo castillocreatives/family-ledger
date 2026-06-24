@@ -58,11 +58,11 @@ export default function MoreScreen() {
 
   const createKid = useMutation({
     mutationFn: (body: object) => apiPost<Kid>("/kids", body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["kids"] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["kids"] }); qc.invalidateQueries({ queryKey: ["dashboard"] }); },
   });
   const deleteKid = useMutation({
     mutationFn: (id: number) => apiDelete(`/kids/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["kids"] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["kids"] }); qc.invalidateQueries({ queryKey: ["dashboard"] }); },
   });
   const createChore = useMutation({
     mutationFn: (body: object) => apiPost<Chore>("/chores", body),
@@ -84,7 +84,7 @@ export default function MoreScreen() {
     onError: (e: any) => Alert.alert("Error", e.message),
   });
 
-  const KID_COLORS = ["#d8a657", "#6db785", "#c9706b", "#7b9fce", "#b57fbf", "#e08654"];
+  const KID_COLORS = ["#8b6fff", "#10d9a0", "#ff6b72", "#60a5fa", "#fbbf24", "#f472b6"];
 
   const handleSaveKid = () => {
     if (!kidName.trim()) { Alert.alert("Name is required"); return; }

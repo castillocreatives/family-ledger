@@ -1,73 +1,39 @@
+const palette = {
+  background: "#0d0b1a",
+  card: "#15132a",
+  surface: "#1c1938",
+  elevated: "#221f3e",
+
+  primary: "#8b6fff",
+  primaryForeground: "#ffffff",
+
+  secondary: "#fbbf24",
+  secondaryForeground: "#0d0b1a",
+
+  foreground: "#ede9ff",
+  mutedForeground: "#7b76aa",
+
+  border: "#231f42",
+  input: "#1c1938",
+
+  positive: "#10d9a0",
+  negative: "#ff6b72",
+
+  muted: "#1c1938",
+  accent: "#fbbf24",
+  accentForeground: "#0d0b1a",
+
+  destructive: "#ff6b72",
+  destructiveForeground: "#ffffff",
+
+  text: "#ede9ff",
+  tint: "#8b6fff",
+};
+
 const colors = {
-  light: {
-    text: "#f5ead0",
-    tint: "#d8a657",
-
-    background: "#14110d",
-    foreground: "#f5ead0",
-
-    card: "#1e1a14",
-    cardForeground: "#f5ead0",
-
-    primary: "#d8a657",
-    primaryForeground: "#14110d",
-
-    secondary: "#2e2620",
-    secondaryForeground: "#f5ead0",
-
-    muted: "#2e2620",
-    mutedForeground: "#9c8a6e",
-
-    accent: "#d8a657",
-    accentForeground: "#14110d",
-
-    destructive: "#c9706b",
-    destructiveForeground: "#f5ead0",
-
-    border: "#2e2620",
-    input: "#2e2620",
-
-    positive: "#6db785",
-    negative: "#c9706b",
-
-    surface: "#241e17",
-  },
-
-  dark: {
-    text: "#f5ead0",
-    tint: "#d8a657",
-
-    background: "#14110d",
-    foreground: "#f5ead0",
-
-    card: "#1e1a14",
-    cardForeground: "#f5ead0",
-
-    primary: "#d8a657",
-    primaryForeground: "#14110d",
-
-    secondary: "#2e2620",
-    secondaryForeground: "#f5ead0",
-
-    muted: "#2e2620",
-    mutedForeground: "#9c8a6e",
-
-    accent: "#d8a657",
-    accentForeground: "#14110d",
-
-    destructive: "#c9706b",
-    destructiveForeground: "#f5ead0",
-
-    border: "#2e2620",
-    input: "#2e2620",
-
-    positive: "#6db785",
-    negative: "#c9706b",
-
-    surface: "#241e17",
-  },
-
-  radius: 12,
+  light: palette,
+  dark: palette,
+  radius: 16,
 };
 
 export default colors;
