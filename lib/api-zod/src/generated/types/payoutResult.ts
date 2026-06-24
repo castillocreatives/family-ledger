@@ -5,6 +5,7 @@
  * Family Ledger API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { PayoutResultAction } from './payoutResultAction';
 import type { Wallet } from './wallet';
 
 export interface PayoutResult {
@@ -15,5 +16,7 @@ export interface PayoutResult {
   goalReached: boolean;
   /** @nullable */
   goalName?: string | null;
+  action?: PayoutResultAction;
+  rolledOverCents?: number;
   wallet?: Wallet;
 }

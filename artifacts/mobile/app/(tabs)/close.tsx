@@ -5,8 +5,12 @@ import {
   ActivityIndicator, Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
 import { apiGet, apiPost, centsToDisplay } from "@/lib/api";
+import Confetti from "@/components/Confetti";
 import colors from "@/constants/colors";
+
+type PayoutAction = "save" | "spend" | "rollover";
 
 const C = colors.light;
 
@@ -32,6 +36,7 @@ type CloseResult = {
 type PayoutResult = {
   kidId: number; payoutCents: number; toSaveCents: number; toSpendCents: number;
   goalReached: boolean; goalName: string | null;
+  action?: PayoutAction; rolledOverCents?: number;
   wallet: { savedBalanceCents: number; spendBalanceCents: number } | null;
 };
 
@@ -105,6 +110,8 @@ export default function CloseScreen() {
   const [step, setStep] = useState<"preview" | "closed" | "paid">("preview");
   const [closeResults, setCloseResults] = useState<CloseResult[]>([]);
   const [payoutResults, setPayoutResults] = useState<PayoutResult[]>([]);
+  const [choices, setChoices] = useState<Record<number, PayoutAction>>({});
+  const [confirming, setConfirming] = useState(false);
 
   const { data: currentWeeks = [], isLoading: loadingWeeks } = useQuery<WeekSummary[]>({
     queryKey: ["weeks", "current"],
@@ -128,6 +135,12 @@ export default function CloseScreen() {
     mutationFn: () => apiPost<CloseResult[]>("/weeks/close"),
     onSuccess: (data) => {
       setCloseResults(data);
+      // Default every positive kid to "add to savings"; negatives are forced rollover.
+      const defaults: Record<number, PayoutAction> = {};
+      for (const r of data) {
+        if (r.payoutCents > 0) defaults[r.weekId] = "save";
+      }
+      setChoices(defaults);
       setStep("closed");
       qc.invalidateQueries({ queryKey: ["weeks"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
@@ -135,20 +148,26 @@ export default function CloseScreen() {
     onError: (e: any) => Alert.alert("Error", e.message),
   });
 
-  const confirmPayout = useMutation({
-    mutationFn: (weekId: number) => apiPost<PayoutResult>(`/weeks/${weekId}/payout`),
-    onSuccess: (data) => setPayoutResults(prev => [...prev, data]),
-    onError: (e: any) => Alert.alert("Error", e.message),
-  });
-
-  const handleCloseAndPayout = async () => {
-    for (const r of closeResults) {
-      if (r.payoutCents > 0) {
-        await confirmPayout.mutateAsync(r.weekId);
+  const handleConfirm = async () => {
+    setConfirming(true);
+    try {
+      const results: PayoutResult[] = [];
+      for (const r of closeResults) {
+        if (r.payoutCents > 0) {
+          const action = choices[r.weekId] ?? "save";
+          const data = await apiPost<PayoutResult>(`/weeks/${r.weekId}/payout`, { action });
+          results.push(data);
+        }
       }
+      setPayoutResults(results);
+      qc.invalidateQueries({ queryKey: ["weeks"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      setStep("paid");
+    } catch (e: any) {
+      Alert.alert("Error", e.message);
+    } finally {
+      setConfirming(false);
     }
-    qc.invalidateQueries({ queryKey: ["dashboard"] });
-    setStep("paid");
   };
 
   const allClosed = currentWeeks.length > 0 && currentWeeks.every(w => w.status === "closed");
@@ -202,89 +221,148 @@ export default function CloseScreen() {
     );
   }
 
-  // STEP: closed — show results, confirm payout
+  // STEP: closed — choose what to do with each kid's balance
   if (step === "closed") {
+    const positives = closeResults.filter(r => r.payoutCents > 0);
     return (
       <SafeAreaView style={styles.safe} edges={["bottom"]}>
         <ScrollView contentContainerStyle={styles.scroll}>
           <Text style={styles.pageLabel}>WEEK CLOSED</Text>
-          <Text style={styles.pageTitle}>Pay out earnings</Text>
-          <Text style={styles.pageDesc}>Confirm to move money into wallets.</Text>
+          <Text style={styles.pageTitle}>What happens next?</Text>
+          <Text style={styles.pageDesc}>Choose where each kid's earnings go.</Text>
 
           {closeResults.map(r => {
             const isPos = r.payoutCents > 0;
+            const selected = choices[r.weekId] ?? "save";
             return (
               <View key={r.kidId} style={styles.kidCard}>
-                <Text style={styles.kidName}>{r.kidName}</Text>
-                <View style={styles.payoutGrid}>
-                  {isPos && (
-                    <View style={styles.payoutItem}>
-                      <Text style={[styles.payoutNum, { color: C.positive }]}>{centsToDisplay(r.payoutCents)}</Text>
-                      <Text style={styles.payoutLbl}>to pay out</Text>
-                    </View>
-                  )}
-                  {r.rolledOverCents < 0 && (
-                    <View style={styles.payoutItem}>
-                      <Text style={[styles.payoutNum, { color: C.negative }]}>{centsToDisplay(r.rolledOverCents)}</Text>
-                      <Text style={styles.payoutLbl}>rolled over</Text>
-                    </View>
-                  )}
-                  <View style={styles.payoutItem}>
-                    <Text style={styles.payoutNum}>{centsToDisplay(r.nextOpeningBalanceCents)}</Text>
-                    <Text style={styles.payoutLbl}>next week opens</Text>
-                  </View>
-                </View>
-                {r.rolledOverCents < 0 && (
-                  <Text style={[styles.rollNote, { color: C.negative }]}>
-                    Nothing to pay — debt carries into next week.
+                <View style={styles.kidHead}>
+                  <Text style={styles.kidName}>{r.kidName}</Text>
+                  <Text style={[styles.kidAmount, { color: isPos ? C.positive : C.negative }]}>
+                    {isPos ? "+" : ""}{centsToDisplay(r.runningTotalCents)}
                   </Text>
+                </View>
+
+                {isPos ? (
+                  <>
+                    {([
+                      { key: "save", icon: "target", title: "Add to savings goal", sub: "Bank it toward their goal" },
+                      { key: "spend", icon: "shopping-bag", title: "Cash out to spend", sub: "Move it to spending money" },
+                      { key: "rollover", icon: "skip-forward", title: "Roll over to next week", sub: "Carry it into next week's start" },
+                    ] as const).map(opt => {
+                      const active = selected === opt.key;
+                      return (
+                        <TouchableOpacity
+                          key={opt.key}
+                          style={[styles.choiceRow, active && styles.choiceRowActive]}
+                          onPress={() => setChoices(prev => ({ ...prev, [r.weekId]: opt.key }))}
+                          activeOpacity={0.7}
+                        >
+                          <View style={[styles.choiceIcon, active && styles.choiceIconActive]}>
+                            <Feather name={opt.icon} size={16} color={active ? C.primaryForeground : C.mutedForeground} />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.choiceTitle, active && { color: C.primary }]}>{opt.title}</Text>
+                            <Text style={styles.choiceSub}>{opt.sub}</Text>
+                          </View>
+                          <Feather
+                            name={active ? "check-circle" : "circle"}
+                            size={20}
+                            color={active ? C.primary : C.border}
+                          />
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </>
+                ) : (
+                  <View style={[styles.outcomeNote, { backgroundColor: C.negative + "12", marginTop: 4 }]}>
+                    <Text style={[styles.outcomeText, { color: C.negative }]}>
+                      In the red — {centsToDisplay(Math.abs(r.runningTotalCents))} must roll over. Next week opens at{" "}
+                      <Text style={{ fontFamily: "Inter_700Bold" }}>{centsToDisplay(r.nextOpeningBalanceCents)}</Text>.
+                    </Text>
+                  </View>
                 )}
               </View>
             );
           })}
 
           <TouchableOpacity
-            style={[styles.primaryBtn, confirmPayout.isPending && styles.btnDisabled]}
-            onPress={handleCloseAndPayout}
-            disabled={confirmPayout.isPending}
+            style={[styles.primaryBtn, confirming && styles.btnDisabled]}
+            onPress={handleConfirm}
+            disabled={confirming}
           >
-            {confirmPayout.isPending
+            {confirming
               ? <ActivityIndicator color={C.primaryForeground} />
-              : <Text style={styles.primaryBtnTxt}>Mark as paid →</Text>
+              : <Text style={styles.primaryBtnTxt}>
+                  {positives.length > 0 ? "Confirm & celebrate →" : "Finish week →"}
+                </Text>
             }
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.skipBtn} onPress={() => setStep("paid")}>
-            <Text style={styles.skipTxt}>Skip for now</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
     );
   }
 
-  // STEP: done
+  // STEP: done — celebrate
+  const negatives = closeResults.filter(r => r.rolledOverCents < 0);
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
+      <Confetti run={step === "paid"} />
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.pageLabel}>ALL DONE</Text>
-        <Text style={styles.pageTitle}>A new week begins.</Text>
+        <Text style={styles.celebrate}>🎉</Text>
+        <Text style={[styles.pageTitle, { textAlign: "center" }]}>Week wrapped up!</Text>
+        <Text style={[styles.pageDesc, { textAlign: "center" }]}>A fresh week begins.</Text>
 
-        {payoutResults.map(r => (
-          <View key={r.kidId} style={styles.kidCard}>
-            <View style={styles.payoutGrid}>
-              <View style={styles.payoutItem}>
-                <Text style={[styles.payoutNum, { color: C.positive }]}>{centsToDisplay(r.toSaveCents)}</Text>
-                <Text style={styles.payoutLbl}>saved</Text>
-              </View>
-              <View style={styles.payoutItem}>
-                <Text style={[styles.payoutNum, { color: C.primary }]}>{centsToDisplay(r.toSpendCents)}</Text>
-                <Text style={styles.payoutLbl}>to spend</Text>
-              </View>
+        {payoutResults.map(r => {
+          const action = r.action ?? "save";
+          return (
+            <View key={r.kidId} style={styles.kidCard}>
+              {action === "rollover" ? (
+                <>
+                  <View style={styles.resultHead}>
+                    <Feather name="skip-forward" size={18} color={C.accent} />
+                    <Text style={styles.resultHeadTxt}>Rolled over</Text>
+                  </View>
+                  <Text style={styles.resultBig}>{centsToDisplay(r.rolledOverCents ?? r.payoutCents)}</Text>
+                  <Text style={styles.payoutLbl}>carried into next week's start</Text>
+                </>
+              ) : (
+                <>
+                  <View style={styles.resultHead}>
+                    <Feather name={action === "save" ? "target" : "shopping-bag"} size={18} color={C.primary} />
+                    <Text style={styles.resultHeadTxt}>
+                      {action === "save" ? "Added to savings" : "Cashed out to spend"}
+                    </Text>
+                  </View>
+                  <View style={styles.payoutGrid}>
+                    <View style={styles.payoutItem}>
+                      <Text style={[styles.payoutNum, { color: C.positive }]}>{centsToDisplay(r.toSaveCents)}</Text>
+                      <Text style={styles.payoutLbl}>saved</Text>
+                    </View>
+                    <View style={styles.payoutItem}>
+                      <Text style={[styles.payoutNum, { color: C.primary }]}>{centsToDisplay(r.toSpendCents)}</Text>
+                      <Text style={styles.payoutLbl}>to spend</Text>
+                    </View>
+                  </View>
+                  {r.goalReached && (
+                    <View style={styles.goalBanner}>
+                      <Text style={styles.goalBannerTxt}>★ Goal reached: {r.goalName}!</Text>
+                    </View>
+                  )}
+                </>
+              )}
             </View>
-            {r.goalReached && (
-              <View style={styles.goalBanner}>
-                <Text style={styles.goalBannerTxt}>★ Goal reached: {r.goalName}!</Text>
-              </View>
-            )}
+          );
+        })}
+
+        {negatives.map(r => (
+          <View key={r.kidId} style={styles.kidCard}>
+            <View style={styles.resultHead}>
+              <Feather name="alert-circle" size={18} color={C.negative} />
+              <Text style={styles.resultHeadTxt}>{r.kidName} — debt rolled over</Text>
+            </View>
+            <Text style={[styles.resultBig, { color: C.negative }]}>{centsToDisplay(r.rolledOverCents)}</Text>
+            <Text style={styles.payoutLbl}>next week opens at {centsToDisplay(r.nextOpeningBalanceCents)}</Text>
           </View>
         ))}
 
@@ -294,6 +372,7 @@ export default function CloseScreen() {
             setStep("preview");
             setCloseResults([]);
             setPayoutResults([]);
+            setChoices({});
             qc.invalidateQueries({ queryKey: ["weeks"] });
             qc.invalidateQueries({ queryKey: ["dashboard"] });
           }}
@@ -316,6 +395,20 @@ const styles = StyleSheet.create({
 
   kidCard: { backgroundColor: C.card, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: C.border },
   kidName: { fontFamily: "Inter_600SemiBold", fontSize: 17, color: C.foreground, marginBottom: 14 },
+  kidHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
+  kidAmount: { fontFamily: "Inter_700Bold", fontSize: 20 },
+
+  choiceRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 11, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, borderColor: C.border, marginBottom: 8, backgroundColor: C.card },
+  choiceRowActive: { borderColor: C.primary, backgroundColor: C.primary + "0C" },
+  choiceIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: C.surface, justifyContent: "center", alignItems: "center" },
+  choiceIconActive: { backgroundColor: C.primary },
+  choiceTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: C.foreground },
+  choiceSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: C.mutedForeground, marginTop: 1 },
+
+  celebrate: { fontSize: 56, textAlign: "center", marginTop: 12, marginBottom: 4 },
+  resultHead: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
+  resultHeadTxt: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: C.foreground },
+  resultBig: { fontFamily: "Inter_700Bold", fontSize: 26, color: C.accent },
 
   ledgerBlock: { gap: 6 },
   ledgerLine: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },

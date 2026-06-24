@@ -35,8 +35,9 @@ export async function getOrCreateCurrentWeek(kidId: number, baseAllowanceCents: 
     .limit(1);
 
   let openingBalanceCents = baseAllowanceCents;
-  if (prevWeek && prevWeek.rolledOverCents !== null && prevWeek.rolledOverCents < 0) {
-    openingBalanceCents = baseAllowanceCents + prevWeek.rolledOverCents; // rolledOver is negative
+  if (prevWeek && prevWeek.rolledOverCents !== null && prevWeek.rolledOverCents !== 0) {
+    // rolledOver may be negative (debt carried) or positive (chose to roll a surplus forward)
+    openingBalanceCents = baseAllowanceCents + prevWeek.rolledOverCents;
   }
 
   const [newWeek] = await db.insert(weeksTable).values({
@@ -122,6 +123,7 @@ export async function processConfirmPayout(
   weekId: number,
   kidId: number,
   payoutCents: number,
+  forceMode?: "save" | "spend",
 ): Promise<{
   toSaveCents: number;
   toSpendCents: number;
@@ -134,7 +136,10 @@ export async function processConfirmPayout(
 
   // Get payout plan
   const [plan] = await db.select().from(payoutPlansTable).where(eq(payoutPlansTable.kidId, kidId));
-  const mode = plan?.modeName ?? 0; // 0=split, 1=save_all, 2=spend_all
+  // forceMode (chosen at close-out) overrides the kid's standing plan.
+  let mode = plan?.modeName ?? 0; // 0=split, 1=save_all, 2=spend_all
+  if (forceMode === "save") mode = 1;
+  else if (forceMode === "spend") mode = 2;
   const savePct = plan?.savePct ?? 70;
 
   let toSaveCents = 0;

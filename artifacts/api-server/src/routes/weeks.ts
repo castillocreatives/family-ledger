@@ -195,10 +195,51 @@ router.post("/weeks/:weekId/payout", requireAuth, requireHousehold, async (req: 
   }
 
   const payoutCents = week.paidOutCents ?? 0;
-  const result = await processConfirmPayout(weekId, kid.id, payoutCents);
+
+  const rawAction = req.body?.action;
+  if (rawAction !== undefined && !["save", "spend", "rollover"].includes(rawAction)) {
+    res.status(400).json({ error: "Invalid action — must be save, spend, or rollover" });
+    return;
+  }
+  const action = rawAction as "save" | "spend" | "rollover" | undefined;
 
   const { walletsTable } = await import("@workspace/db");
   const { eq: eqInst } = await import("drizzle-orm");
+
+  // Roll a positive balance forward instead of paying it out: zero the payout
+  // and stash it as rolledOverCents so next week opens with the surplus.
+  // Guard: only positive balances can be rolled over this way — never overwrite
+  // a negative rolledOverCents (carried debt) from close-out with zero.
+  if (action === "rollover") {
+    if (payoutCents <= 0) {
+      res.status(400).json({ error: "Nothing to roll over — balance is not positive" });
+      return;
+    }
+    await db.update(weeksTable)
+      .set({ paidOutCents: 0, rolledOverCents: payoutCents })
+      .where(eq(weeksTable.id, weekId));
+    const [wallet] = await db.select().from(walletsTable).where(eqInst(walletsTable.kidId, kid.id));
+    res.json({
+      kidId: kid.id,
+      payoutCents,
+      toSaveCents: 0,
+      toSpendCents: 0,
+      goalReached: false,
+      goalName: null,
+      action: "rollover",
+      rolledOverCents: payoutCents,
+      wallet: wallet ? {
+        kidId: wallet.kidId,
+        savedBalanceCents: wallet.savedBalanceCents,
+        spendBalanceCents: wallet.spendBalanceCents,
+      } : null,
+    });
+    return;
+  }
+
+  const forceMode = action === "save" ? "save" : action === "spend" ? "spend" : undefined;
+  const result = await processConfirmPayout(weekId, kid.id, payoutCents, forceMode);
+
   const [wallet] = await db.select().from(walletsTable).where(eqInst(walletsTable.kidId, kid.id));
 
   res.json({
@@ -208,6 +249,9 @@ router.post("/weeks/:weekId/payout", requireAuth, requireHousehold, async (req: 
     toSpendCents: result.toSpendCents,
     goalReached: result.goalReached,
     goalName: result.goalName,
+    // Only echo an explicit choice; when omitted the kid's standing plan decided the split.
+    action,
+    rolledOverCents: 0,
     wallet: wallet ? {
       kidId: wallet.kidId,
       savedBalanceCents: wallet.savedBalanceCents,

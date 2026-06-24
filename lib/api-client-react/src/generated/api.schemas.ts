@@ -246,6 +246,32 @@ export interface CloseOutResult {
   nextOpeningBalanceCents: number;
 }
 
+/**
+ * How to handle the positive balance — add to savings, cash out to spend, or roll forward.
+ */
+export type PayoutInputAction = typeof PayoutInputAction[keyof typeof PayoutInputAction];
+
+
+export const PayoutInputAction = {
+  save: 'save',
+  spend: 'spend',
+  rollover: 'rollover',
+} as const;
+
+export interface PayoutInput {
+  /** How to handle the positive balance — add to savings, cash out to spend, or roll forward. */
+  action?: PayoutInputAction;
+}
+
+export type PayoutResultAction = typeof PayoutResultAction[keyof typeof PayoutResultAction];
+
+
+export const PayoutResultAction = {
+  save: 'save',
+  spend: 'spend',
+  rollover: 'rollover',
+} as const;
+
 export interface Wallet {
   kidId: number;
   savedBalanceCents: number;
@@ -260,6 +286,8 @@ export interface PayoutResult {
   goalReached: boolean;
   /** @nullable */
   goalName?: string | null;
+  action?: PayoutResultAction;
+  rolledOverCents?: number;
   wallet?: Wallet;
 }
 

@@ -469,13 +469,19 @@ paths:
     post:
       operationId: confirmPayout
       tags: [weeks]
-      summary: Confirm a payout for a kid's closed week — splits into wallet
+      summary: Confirm a payout for a kid's closed week — save, cash out, or roll over
       parameters:
         - name: weekId
           in: path
           required: true
           schema:
             type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayoutInput"
       responses:
         "200":
           description: Payout confirmed, wallet updated
@@ -1019,6 +1025,14 @@ components:
         nextOpeningBalanceCents:
           type: integer
 
+    PayoutInput:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [save, spend, rollover]
+          description: How to handle the positive balance — add to savings, cash out to spend, or roll forward.
+
     PayoutResult:
       type: object
       required: [kidId, payoutCents, toSaveCents, toSpendCents, goalReached]
@@ -1035,6 +1049,11 @@ components:
           type: boolean
         goalName:
           type: ["string", "null"]
+        action:
+          type: string
+          enum: [save, spend, rollover]
+        rolledOverCents:
+          type: integer
         wallet:
           $ref: "#/components/schemas/Wallet"
 

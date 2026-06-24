@@ -42,6 +42,7 @@ import type {
   KidUpdate,
   Member,
   MemberUpdate,
+  PayoutInput,
   PayoutPlan,
   PayoutPlanUpdate,
   PayoutResult,
@@ -1771,16 +1772,18 @@ export const getConfirmPayoutUrl = (weekId: number,) => {
 }
 
 /**
- * @summary Confirm a payout for a kid's closed week — splits into wallet
+ * @summary Confirm a payout for a kid's closed week — save, cash out, or roll over
  */
-export const confirmPayout = async (weekId: number, options?: RequestInit): Promise<PayoutResult> => {
+export const confirmPayout = async (weekId: number,
+    payoutInput?: PayoutInput, options?: RequestInit): Promise<PayoutResult> => {
 
   return customFetch<PayoutResult>(getConfirmPayoutUrl(weekId),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      payoutInput,)
   }
 );}
 
@@ -1788,8 +1791,8 @@ export const confirmPayout = async (weekId: number, options?: RequestInit): Prom
 
 
 export const getConfirmPayoutMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmPayout>>, TError,{weekId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof confirmPayout>>, TError,{weekId: number}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmPayout>>, TError,{weekId: number;data?: BodyType<PayoutInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof confirmPayout>>, TError,{weekId: number;data?: BodyType<PayoutInput>}, TContext> => {
 
 const mutationKey = ['confirmPayout'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -1801,10 +1804,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmPayout>>, {weekId: number}> = (props) => {
-          const {weekId} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmPayout>>, {weekId: number;data?: BodyType<PayoutInput>}> = (props) => {
+          const {weekId,data} = props ?? {};
 
-          return  confirmPayout(weekId,requestOptions)
+          return  confirmPayout(weekId,data,requestOptions)
         }
 
 
@@ -1815,18 +1818,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type ConfirmPayoutMutationResult = NonNullable<Awaited<ReturnType<typeof confirmPayout>>>
-
+    export type ConfirmPayoutMutationBody = BodyType<PayoutInput> | undefined
     export type ConfirmPayoutMutationError = ErrorType<unknown>
 
     /**
- * @summary Confirm a payout for a kid's closed week — splits into wallet
+ * @summary Confirm a payout for a kid's closed week — save, cash out, or roll over
  */
 export const useConfirmPayout = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmPayout>>, TError,{weekId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmPayout>>, TError,{weekId: number;data?: BodyType<PayoutInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof confirmPayout>>,
         TError,
-        {weekId: number},
+        {weekId: number;data?: BodyType<PayoutInput>},
         TContext
       > => {
       return useMutation(getConfirmPayoutMutationOptions(options));

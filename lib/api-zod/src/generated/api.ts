@@ -407,10 +407,14 @@ export const CloseWeekResponse = zod.array(CloseWeekResponseItem)
 
 
 /**
- * @summary Confirm a payout for a kid's closed week — splits into wallet
+ * @summary Confirm a payout for a kid's closed week — save, cash out, or roll over
  */
 export const ConfirmPayoutParams = zod.object({
   "weekId": zod.coerce.number()
+})
+
+export const ConfirmPayoutBody = zod.object({
+  "action": zod.enum(['save', 'spend', 'rollover']).optional().describe('How to handle the positive balance — add to savings, cash out to spend, or roll forward.')
 })
 
 export const ConfirmPayoutResponse = zod.object({
@@ -420,6 +424,8 @@ export const ConfirmPayoutResponse = zod.object({
   "toSpendCents": zod.number(),
   "goalReached": zod.boolean(),
   "goalName": zod.string().nullish(),
+  "action": zod.enum(['save', 'spend', 'rollover']).optional(),
+  "rolledOverCents": zod.number().optional(),
   "wallet": zod.object({
   "kidId": zod.number(),
   "savedBalanceCents": zod.number(),
