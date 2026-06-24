@@ -3,7 +3,7 @@ import { useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity,
-  ActivityIndicator, Alert, Modal, TextInput,
+  ActivityIndicator, Alert, Modal, TextInput, Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { apiGet, apiPost, apiDelete, centsToDisplay } from "@/lib/api";
@@ -164,6 +164,10 @@ export default function TrackerScreen() {
   }
 
   const isOpen = currentWeek?.status !== "closed";
+  // Tab bar is position:absolute and overlays screen content, so the sticky
+  // action bar must be lifted above it (84px on web, ~49px native tab bar;
+  // SafeAreaView already pads the bottom safe-area inset).
+  const tabBarOffset = Platform.OS === "web" ? 84 : 49;
 
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
@@ -381,12 +385,12 @@ export default function TrackerScreen() {
           </>
         )}
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: tabBarOffset + 90 }} />
       </ScrollView>
 
       {/* Sticky bottom actions */}
       {isOpen && (
-        <View style={styles.stickyBottom}>
+        <View style={[styles.stickyBottom, { bottom: tabBarOffset }]}>
           <TouchableOpacity
             style={styles.bottomBonus}
             onPress={() => { setAmount(""); setEntryLabel(""); setBonusModal(true); }}
@@ -496,7 +500,7 @@ const styles = StyleSheet.create({
   extraNote: { fontFamily: "Inter_400Regular", fontSize: 12, color: C.mutedForeground, marginTop: 2 },
   extraAmt: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
 
-  stickyBottom: { position: "absolute", bottom: 0, left: 0, right: 0, flexDirection: "row", gap: 10, padding: 16, paddingBottom: 32, backgroundColor: C.background, borderTopWidth: 1, borderTopColor: C.border },
+  stickyBottom: { position: "absolute", left: 0, right: 0, flexDirection: "row", gap: 10, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 14, backgroundColor: C.background, borderTopWidth: 1, borderTopColor: C.border },
   bottomBonus: { flex: 1, backgroundColor: C.positive + "18", paddingVertical: 13, borderRadius: 12, alignItems: "center", borderWidth: 1, borderColor: C.positive + "50" },
   bottomBonusTxt: { fontFamily: "Inter_600SemiBold", color: C.positive, fontSize: 14 },
   bottomPenalty: { flex: 1, backgroundColor: C.negative + "18", paddingVertical: 13, borderRadius: 12, alignItems: "center", borderWidth: 1, borderColor: C.negative + "50" },
