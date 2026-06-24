@@ -8,11 +8,15 @@ import {
 import * as Clipboard from "expo-clipboard";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { apiGet, apiPost, apiPatch, apiDelete, centsToDisplay } from "@/lib/api";
+import GoalsModal from "@/components/GoalsModal";
 import colors from "@/constants/colors";
 
 const C = colors.light;
 
 type Kid = { id: number; name: string; color: string; baseAllowanceCents: number };
+type ActiveGoal = { id: number; name: string; targetCents: number; savedCents: number };
+type KidSummary = { kid: { id: number }; activeGoal: ActiveGoal | null };
+type Dashboard = { kidSummaries: KidSummary[] };
 type Chore = { id: number; name: string; valueCents: number; active: boolean; kidIds: number[] };
 type Member = { id: number; name: string; avatarInitial: string; role: string };
 type Household = { id: number; name: string; baseDefaultCents: number; weekStartDow: number };
@@ -55,9 +59,11 @@ export default function MoreScreen() {
   const [copied, setCopied] = useState(false);
   const [signOutConfirm, setSignOutConfirm] = useState(false);
   const [confirmDeleteKid, setConfirmDeleteKid] = useState(false);
+  const [goalsKid, setGoalsKid] = useState<Kid | null>(null);
 
   const { data: kids = [] } = useQuery<Kid[]>({ queryKey: ["kids"], queryFn: () => apiGet("/kids") });
   const { data: chores = [] } = useQuery<Chore[]>({ queryKey: ["chores"], queryFn: () => apiGet("/chores") });
+  const { data: dashboard } = useQuery<Dashboard>({ queryKey: ["dashboard"], queryFn: () => apiGet("/dashboard") });
   const { data: member } = useQuery<Member>({
     queryKey: ["member", "me"],
     queryFn: () => apiGet<Member>("/members/me"),
@@ -256,6 +262,29 @@ export default function MoreScreen() {
           </TouchableOpacity>
         </Section>
 
+        {/* Savings goals */}
+        <Section title="Savings goals">
+          {kids.length === 0 ? (
+            <View style={styles.row}><Text style={styles.choreAppliesTo}>Add a kid first to set up savings goals.</Text></View>
+          ) : kids.map(k => {
+            const summary = dashboard?.kidSummaries.find(s => s.kid.id === k.id);
+            const goal = summary?.activeGoal ?? null;
+            return (
+              <TouchableOpacity key={k.id} style={styles.row} onPress={() => setGoalsKid(k)}>
+                <View style={{ flex: 1, paddingRight: 10 }}>
+                  <Text style={styles.rowLabel}>{k.name}</Text>
+                  <Text style={styles.choreAppliesTo}>
+                    {goal
+                      ? `${goal.name} · ${centsToDisplay(goal.savedCents)} / ${centsToDisplay(goal.targetCents)}`
+                      : "No active goal"}
+                  </Text>
+                </View>
+                <Text style={styles.rowChevron}>›</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </Section>
+
         {/* Household */}
         <Section title="Household">
           {household && <Row label={household.name} value={`base ${centsToDisplay(household.baseDefaultCents)}/wk`} />}
@@ -267,6 +296,9 @@ export default function MoreScreen() {
           <Row label="Sign out" destructive onPress={() => setSignOutConfirm(true)} />
         </Section>
       </ScrollView>
+
+      {/* Savings goals modal */}
+      <GoalsModal kid={goalsKid} visible={goalsKid !== null} onClose={() => setGoalsKid(null)} />
 
       {/* Add Kid Modal */}
       <Modal visible={kidModal.visible} transparent animationType="slide">

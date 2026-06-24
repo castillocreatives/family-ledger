@@ -605,6 +605,31 @@ paths:
         "204":
           description: Deleted
 
+  /goals/{id}/contribute:
+    post:
+      operationId: contributeToGoal
+      tags: [goals]
+      summary: Apply a kid's unallocated saved money toward a goal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoalContributionInput"
+      responses:
+        "200":
+          description: Applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoalContributionResult"
+
   # ── Wallets ──────────────────────────────────────────────────────────────────
   /kids/{kidId}/wallet:
     get:
@@ -1100,6 +1125,27 @@ components:
           type: ["string", "null"]
         targetCents:
           type: integer
+
+    GoalContributionInput:
+      type: object
+      required: [amountCents]
+      properties:
+        amountCents:
+          type: integer
+          description: "Amount of unallocated savings to apply, in cents"
+
+    GoalContributionResult:
+      type: object
+      required: [goal, appliedCents, unallocatedCents]
+      properties:
+        goal:
+          $ref: "#/components/schemas/Goal"
+        appliedCents:
+          type: integer
+          description: "Amount actually applied after capping to available/needed"
+        unallocatedCents:
+          type: integer
+          description: "Remaining unallocated savings after this contribution"
 
     # ── Wallet ────────────────────────────────────────────────────────────────
     Wallet:

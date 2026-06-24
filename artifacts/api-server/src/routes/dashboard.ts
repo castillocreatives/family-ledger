@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { db, householdsTable, membersTable, kidsTable, walletsTable, goalsTable } from "@workspace/db";
 import { requireAuth, requireHousehold } from "../middlewares/auth";
 import { getOrCreateCurrentWeek, computeRunningTotal, computeChoreStats, materializeAutoMisses } from "../lib/weekEngine";
@@ -21,7 +21,7 @@ router.get("/dashboard", requireAuth, requireHousehold, async (req: Request, res
 
     const [wallet] = await db.select().from(walletsTable).where(eq(walletsTable.kidId, kid.id));
     const [activeGoal] = await db.select().from(goalsTable)
-      .where(and(eq(goalsTable.kidId, kid.id)))
+      .where(and(eq(goalsTable.kidId, kid.id), isNull(goalsTable.completedAt)))
       .orderBy(goalsTable.createdAt)
       .limit(1);
 
@@ -50,7 +50,7 @@ router.get("/dashboard", requireAuth, requireHousehold, async (req: Request, res
         savedBalanceCents: wallet?.savedBalanceCents ?? 0,
         spendBalanceCents: wallet?.spendBalanceCents ?? 0,
       },
-      activeGoal: activeGoal && !activeGoal.completedAt ? {
+      activeGoal: activeGoal ? {
         id: activeGoal.id,
         name: activeGoal.name,
         targetCents: activeGoal.targetCents,

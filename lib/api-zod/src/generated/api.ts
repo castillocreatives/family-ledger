@@ -520,6 +520,32 @@ export const DeleteGoalParams = zod.object({
 
 
 /**
+ * @summary Apply a kid's unallocated saved money toward a goal
+ */
+export const ContributeToGoalParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ContributeToGoalBody = zod.object({
+  "amountCents": zod.number().describe('Amount of unallocated savings to apply, in cents')
+})
+
+export const ContributeToGoalResponse = zod.object({
+  "goal": zod.object({
+  "id": zod.number(),
+  "kidId": zod.number(),
+  "name": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "targetCents": zod.number(),
+  "savedCents": zod.number(),
+  "completedAt": zod.string().nullish()
+}),
+  "appliedCents": zod.number().describe('Amount actually applied after capping to available\/needed'),
+  "unallocatedCents": zod.number().describe('Remaining unallocated savings after this contribution')
+})
+
+
+/**
  * @summary Get a kid's wallet balances
  */
 export const GetWalletParams = zod.object({

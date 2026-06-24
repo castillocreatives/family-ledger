@@ -16,6 +16,8 @@ export * from './entryInput';
 export * from './entryInputType';
 export * from './entryType';
 export * from './goal';
+export * from './goalContributionInput';
+export * from './goalContributionResult';
 export * from './goalInput';
 export * from './goalUpdate';
 export * from './healthStatus';

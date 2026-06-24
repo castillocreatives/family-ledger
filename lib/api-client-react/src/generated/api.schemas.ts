@@ -319,6 +319,19 @@ export interface GoalUpdate {
   targetCents?: number;
 }
 
+export interface GoalContributionInput {
+  /** Amount of unallocated savings to apply, in cents */
+  amountCents: number;
+}
+
+export interface GoalContributionResult {
+  goal: Goal;
+  /** Amount actually applied after capping to available/needed */
+  appliedCents: number;
+  /** Remaining unallocated savings after this contribution */
+  unallocatedCents: number;
+}
+
 export type PayoutPlanMode = typeof PayoutPlanMode[keyof typeof PayoutPlanMode];
 
 

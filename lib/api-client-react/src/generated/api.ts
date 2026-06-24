@@ -28,6 +28,8 @@ import type {
   Entry,
   EntryInput,
   Goal,
+  GoalContributionInput,
+  GoalContributionResult,
   GoalInput,
   GoalUpdate,
   HealthStatus,
@@ -2264,6 +2266,78 @@ export const useDeleteGoal = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteGoalMutationOptions(options));
+    }
+
+export const getContributeToGoalUrl = (id: number,) => {
+
+
+
+
+  return `/api/goals/${id}/contribute`
+}
+
+/**
+ * @summary Apply a kid's unallocated saved money toward a goal
+ */
+export const contributeToGoal = async (id: number,
+    goalContributionInput: GoalContributionInput, options?: RequestInit): Promise<GoalContributionResult> => {
+
+  return customFetch<GoalContributionResult>(getContributeToGoalUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      goalContributionInput,)
+  }
+);}
+
+
+
+
+export const getContributeToGoalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof contributeToGoal>>, TError,{id: number;data: BodyType<GoalContributionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof contributeToGoal>>, TError,{id: number;data: BodyType<GoalContributionInput>}, TContext> => {
+
+const mutationKey = ['contributeToGoal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof contributeToGoal>>, {id: number;data: BodyType<GoalContributionInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  contributeToGoal(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ContributeToGoalMutationResult = NonNullable<Awaited<ReturnType<typeof contributeToGoal>>>
+    export type ContributeToGoalMutationBody = BodyType<GoalContributionInput>
+    export type ContributeToGoalMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Apply a kid's unallocated saved money toward a goal
+ */
+export const useContributeToGoal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof contributeToGoal>>, TError,{id: number;data: BodyType<GoalContributionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof contributeToGoal>>,
+        TError,
+        {id: number;data: BodyType<GoalContributionInput>},
+        TContext
+      > => {
+      return useMutation(getContributeToGoalMutationOptions(options));
     }
 
 export const getGetWalletUrl = (kidId: number,) => {

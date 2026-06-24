@@ -1,5 +1,5 @@
 import { db, weeksTable, entriesTable, kidsTable, walletsTable, payoutPlansTable, goalsTable, choresTable, choreKidsTable } from "@workspace/db";
-import { eq, and, desc, sum, inArray } from "drizzle-orm";
+import { eq, and, desc, sum, inArray, isNull } from "drizzle-orm";
 
 function isoDate(d: Date): string {
   return d.toISOString().split("T")[0];
@@ -265,11 +265,11 @@ export async function processConfirmPayout(
   const [activeGoal] = await db
     .select()
     .from(goalsTable)
-    .where(and(eq(goalsTable.kidId, kidId)))
+    .where(and(eq(goalsTable.kidId, kidId), isNull(goalsTable.completedAt)))
     .orderBy(goalsTable.createdAt)
     .limit(1);
 
-  if (activeGoal && !activeGoal.completedAt && toSaveCents > 0) {
+  if (activeGoal && toSaveCents > 0) {
     const needed = activeGoal.targetCents - activeGoal.savedCents;
     const fillAmount = Math.min(toSaveCents, needed);
     const newSaved = activeGoal.savedCents + fillAmount;
