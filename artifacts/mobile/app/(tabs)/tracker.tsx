@@ -367,7 +367,7 @@ export default function TrackerScreen() {
             style={styles.bottomPenalty}
             onPress={() => { setAmount(""); setEntryLabel(""); setPenaltyNote(""); setPenaltyModal(true); }}
           >
-            <Text style={styles.bottomPenaltyTxt}>– Remove points</Text>
+            <Text style={styles.bottomPenaltyTxt}>– Deduct money</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -377,8 +377,9 @@ export default function TrackerScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Add bonus</Text>
+            <Text style={styles.modalHint}>Reward extra good behavior outside of chores.</Text>
             <TextInput style={styles.input} placeholder="Amount ($)" placeholderTextColor={C.mutedForeground} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
-            <TextInput style={styles.input} placeholder="Label (optional)" placeholderTextColor={C.mutedForeground} value={entryLabel} onChangeText={setEntryLabel} />
+            <TextInput style={styles.input} placeholder="What's it for? (e.g. Helped a neighbor)" placeholderTextColor={C.mutedForeground} value={entryLabel} onChangeText={setEntryLabel} />
             <View style={styles.modalBtns}>
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setBonusModal(false)}>
                 <Text style={styles.cancelTxt}>Cancel</Text>
@@ -395,10 +396,11 @@ export default function TrackerScreen() {
       <Modal visible={penaltyModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Remove points</Text>
+            <Text style={styles.modalTitle}>Deduct money</Text>
+            <Text style={styles.modalHint}>Take money away for bad behavior. A reason is required.</Text>
             <TextInput style={styles.input} placeholder="Amount ($)" placeholderTextColor={C.mutedForeground} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
             <TextInput style={styles.input} placeholder="Label (optional)" placeholderTextColor={C.mutedForeground} value={entryLabel} onChangeText={setEntryLabel} />
-            <TextInput style={[styles.input, { minHeight: 60 }]} placeholder="Reason — why are points removed? (required)" placeholderTextColor={C.mutedForeground} value={penaltyNote} onChangeText={setPenaltyNote} multiline />
+            <TextInput style={[styles.input, { minHeight: 60 }]} placeholder="Reason — why is money being deducted? (required)" placeholderTextColor={C.mutedForeground} value={penaltyNote} onChangeText={setPenaltyNote} multiline />
             <View style={styles.modalBtns}>
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setPenaltyModal(false)}>
                 <Text style={styles.cancelTxt}>Cancel</Text>
@@ -465,7 +467,8 @@ const styles = StyleSheet.create({
 
   modalOverlay: { flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" },
   modalCard: { backgroundColor: C.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 44 },
-  modalTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: C.foreground, marginBottom: 16 },
+  modalTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: C.foreground, marginBottom: 6 },
+  modalHint: { fontFamily: "Inter_400Regular", fontSize: 13, color: C.mutedForeground, lineHeight: 18, marginBottom: 16 },
   input: { backgroundColor: C.background, color: C.foreground, fontFamily: "Inter_400Regular", borderWidth: 1, borderColor: C.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, marginBottom: 12 },
   modalBtns: { flexDirection: "row", gap: 10, marginTop: 4 },
   cancelBtn: { flex: 1, backgroundColor: C.surface, borderRadius: 10, paddingVertical: 13, alignItems: "center" },
