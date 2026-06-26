@@ -1,6 +1,6 @@
 import { useAuth } from "@clerk/expo";
 import { Redirect } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import colors from "@/constants/colors";
 import { apiFetch } from "@/lib/api";
@@ -12,6 +12,10 @@ type Status = "checking" | "tabs" | "onboarding" | "error";
 export default function IndexScreen() {
   const { isSignedIn, isLoaded, getToken } = useAuth();
   const [status, setStatus] = useState<Status>("checking");
+  // Guards against an infinite loop: Clerk's `getToken` is not a stable
+  // reference across renders, so `checkHousehold` (and the effect that depends
+  // on it) would otherwise re-run every render and hammer /households/me.
+  const hasChecked = useRef(false);
 
   const checkHousehold = useCallback(async () => {
     setStatus("checking");
@@ -52,7 +56,14 @@ export default function IndexScreen() {
   }, [getToken]);
 
   useEffect(() => {
-    if (isLoaded && isSignedIn) checkHousehold();
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      hasChecked.current = false;
+      return;
+    }
+    if (hasChecked.current) return;
+    hasChecked.current = true;
+    checkHousehold();
   }, [isLoaded, isSignedIn, checkHousehold]);
 
   if (!isLoaded) return <Loading />;

@@ -1,3 +1,4 @@
 - [Week rollover semantics](week-rollover.md) — positive/negative balances carry via rolledOverCents; rollover action is positive-only or it erases carried debt.
 - [Auto-miss chore deductions](auto-miss-chores.md) — incomplete paid chores auto-deduct via read-triggered materializeAutoMisses; needs entryDate + choreId unique index for idempotency.
+- [Clerk getToken effect loop](clerk-gettoken-loop.md) — Clerk Expo getToken is NOT a stable ref; guard auth-bootstrap effects with a run-once useRef or they loop and storm the API.
 - [Savings allocation model](savings-allocation-model.md) — goal.savedCents is an earmark of wallet.savedBalanceCents (not extra money); active goal = oldest INCOMPLETE goal via isNull(completedAt).
